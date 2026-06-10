@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.db.session import SessionLocal
+from app.routers.analysis_reports import router as analysis_reports_router
 from app.routers.auth import router as auth_router
 from app.routers.github import router as github_router
 from app.routers.projects import router as projects_router
@@ -28,6 +29,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(github_router)
+app.include_router(analysis_reports_router)
 
 
 @app.get("/health")
