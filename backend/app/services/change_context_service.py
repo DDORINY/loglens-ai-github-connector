@@ -161,3 +161,103 @@ def calculate_relevance(
         "reasons": reasons,
         "matched_keywords": matched_keywords[:10],
     }
+
+
+def build_change_context_markdown(context: dict[str, Any]) -> str:
+    commit = context.get("commit") or {}
+    pull_requests = context.get("pull_requests") or []
+    changed_files = context.get("changed_files") or []
+    relevance = context.get("relevance") or {}
+
+    lines: list[str] = []
+
+    lines.append("## 관련 변경사항 후보")
+    lines.append("")
+
+    lines.append("### Commit")
+    lines.append("")
+
+    commit_message = commit.get("message") or "커밋 메시지를 확인할 수 없습니다."
+    commit_sha = commit.get("sha") or ""
+    short_sha = commit_sha[:7] if commit_sha else "-"
+    commit_author = commit.get("author") or "-"
+    committed_at = commit.get("committed_at") or "-"
+    commit_url = commit.get("html_url") or "-"
+
+    lines.append(f"- Message: {commit_message}")
+    lines.append(f"- SHA: {short_sha}")
+    lines.append(f"- Author: {commit_author}")
+    lines.append(f"- Committed At: {committed_at}")
+
+    if commit_url != "-":
+        lines.append(f"- URL: {commit_url}")
+
+    lines.append("")
+
+    lines.append("### Pull Request")
+    lines.append("")
+
+    if pull_requests:
+        for pr in pull_requests[:5]:
+            number = pr.get("number") or "-"
+            title = pr.get("title") or "제목 없음"
+            state = pr.get("state") or "-"
+            merged_at = pr.get("merged_at") or "-"
+            html_url = pr.get("html_url") or "-"
+
+            lines.append(f"- #{number} {title}")
+            lines.append(f"  - State: {state}")
+            lines.append(f"  - Merged At: {merged_at}")
+
+            if html_url != "-":
+                lines.append(f"  - URL: {html_url}")
+    else:
+        lines.append("- 연결된 Pull Request가 없습니다.")
+        lines.append("- 해당 workflow run은 직접 commit 또는 merge commit 기준으로 분석되었습니다.")
+
+    lines.append("")
+
+    lines.append("### Changed Files")
+    lines.append("")
+
+    if changed_files:
+        for file in changed_files[:20]:
+            filename = file.get("filename") or "-"
+            status = file.get("status") or "-"
+            additions = file.get("additions") or 0
+            deletions = file.get("deletions") or 0
+            changes = file.get("changes") or 0
+
+            lines.append(
+                f"- `{filename}` {status} (+{additions} / -{deletions}, changes: {changes})"
+            )
+
+        if len(changed_files) > 20:
+            lines.append(f"- ...and {len(changed_files) - 20} more files")
+    else:
+        lines.append("- 변경 파일을 확인할 수 없습니다.")
+
+    lines.append("")
+
+    lines.append("### Relevance")
+    lines.append("")
+
+    score = relevance.get("score", 0)
+    reasons = relevance.get("reasons") or []
+    matched_keywords = relevance.get("matched_keywords") or []
+
+    lines.append(f"- Score: {score} / 100")
+
+    if reasons:
+        lines.append("- Reasons:")
+        for reason in reasons:
+            lines.append(f"  - {reason}")
+    else:
+        lines.append("- Reasons: 명확한 연관성 판단 근거가 없습니다.")
+
+    if matched_keywords:
+        lines.append("- Matched Keywords:")
+        for keyword in matched_keywords[:10]:
+            lines.append(f"  - `{keyword}`")
+
+    return "\n".join(lines)
