@@ -8,6 +8,7 @@ const links = [
   { href: "/dashboard", label: "대시보드", icon: "D", section: "dashboard" },
   { href: "/projects", label: "프로젝트", icon: "P", section: "projects" },
   { href: "/projects", label: "GitHub 저장소", icon: "R", section: "repositories" },
+  { href: "/server-logs", label: "서버 로그", icon: "L", section: "server-logs" },
   { href: "/reports", label: "분석 리포트", icon: "A", section: "reports" },
 ];
 
@@ -31,6 +32,8 @@ export default function Sidebar() {
           const active =
             link.section === "repositories"
               ? pathname.startsWith("/repositories")
+              : link.section === "server-logs"
+                ? pathname.startsWith("/server-logs") || pathname.startsWith("/server-log-reports")
               : pathname === link.href || pathname.startsWith(`${link.href}/`);
           return (
             <Link

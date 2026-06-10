@@ -83,7 +83,46 @@ export default function DashboardPage() {
               <Link href="/projects" className="btn-primary">프로젝트 관리하기</Link>
               <Link href={repositories[0] ? `/repositories/${repositories[0].id}` : "/projects"} className="btn-secondary">저장소 보기</Link>
               <Link href="/reports" className="btn-secondary">분석 리포트 보기</Link>
+              <Link href="/server-logs" className="btn-secondary">서버 로그 분석하기</Link>
             </div>
+          </section>
+
+          <section className="mt-6 grid gap-6 lg:grid-cols-2">
+            <article className="panel p-6">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-500 text-sm font-black text-white">CI</span>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-600">GitHub</p>
+                  <h2 className="mt-1 text-xl font-black text-slate-900">GitHub Actions 실패 분석</h2>
+                </div>
+              </div>
+              <ul className="mt-5 space-y-2 text-sm leading-6 text-slate-600">
+                <li>1. 실패한 Actions run 조회</li>
+                <li>2. 실패 로그와 원인 분석</li>
+                <li>3. 커밋/PR 확인 후 GitHub Issue 생성</li>
+              </ul>
+              <Link href={repositories[0] ? `/repositories/${repositories[0].id}` : "/projects"} className="btn-primary mt-5">
+                Actions 실패 분석하기
+              </Link>
+            </article>
+
+            <article className="panel p-6">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 font-mono text-xs font-black text-white">LOG</span>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-600">Operations</p>
+                  <h2 className="mt-1 text-xl font-black text-slate-900">서버 로그 분석</h2>
+                </div>
+              </div>
+              <ul className="mt-5 space-y-2 text-sm leading-6 text-slate-600">
+                <li>1. .log 또는 .txt 파일 업로드</li>
+                <li>2. ERROR, WARN, HTTP 5xx 패턴 탐지</li>
+                <li>3. 장애 후보 분석 리포트 생성</li>
+              </ul>
+              <Link href="/server-logs" className="btn-primary mt-5">
+                서버 로그 분석하기
+              </Link>
+            </article>
           </section>
 
           <section className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_1.9fr]">

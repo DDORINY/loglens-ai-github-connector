@@ -147,3 +147,46 @@ export type CIAnalysisReport = {
   engine_version?: string;
   created_at: string;
 };
+
+export type ServerLog = {
+  id: number;
+  project_id: number;
+  filename: string;
+  content_type: string | null;
+  size_bytes: number;
+  source: string | null;
+  raw_content: string;
+  created_at: string;
+};
+
+export type ServerLogListItem = {
+  id: number;
+  project_id: number;
+  filename: string;
+  content_type: string | null;
+  size_bytes: number;
+  source: string | null;
+  created_at: string;
+};
+
+export type ServerLogAnalysisReport = {
+  id: number;
+  project_id: number;
+  server_log_id: number;
+  category: string;
+  severity: string;
+  summary: string;
+  evidence: string[];
+  error_groups: {
+    fingerprint: string;
+    severity: string;
+    message: string;
+    sample_line: string;
+    count: number;
+  }[];
+  suspected_causes: string[];
+  recommended_actions: string[];
+  analysis_score: number | null;
+  engine_version: string | null;
+  created_at: string;
+};
