@@ -1,3 +1,4 @@
+from app.routers import server_logs
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -30,6 +31,7 @@ app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(github_router)
 app.include_router(analysis_reports_router)
+app.include_router(server_logs.router)
 
 
 @app.get("/health")
