@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CIAnalysisReportResponse(BaseModel):
@@ -15,6 +15,10 @@ class CIAnalysisReportResponse(BaseModel):
     evidence: list[str]
     suspected_causes: list[str]
     recommended_actions: list[str]
+
+    matched_patterns: list[str] = Field(default_factory=list)
+    analysis_score: int | None = None
+    engine_version: str | None = None
 
     issue_title: str
     issue_body: str

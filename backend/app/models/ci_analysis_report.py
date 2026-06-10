@@ -37,6 +37,10 @@ class CIAnalysisReport(Base):
     suspected_causes = Column(JSON, nullable=False, default=list)
     recommended_actions = Column(JSON, nullable=False, default=list)
 
+    matched_patterns = Column(JSON, nullable=False, default=list)
+    analysis_score = Column(Integer, nullable=True)
+    engine_version = Column(String(100), nullable=True)
+
     issue_title = Column(Text, nullable=False)
     issue_body = Column(Text, nullable=False)
 

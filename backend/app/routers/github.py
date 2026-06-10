@@ -404,6 +404,12 @@ def create_issue_from_actions_run(
     )
 
     if existing_report and existing_report.github_issue_url:
+        existing_report.matched_patterns = analysis.get("matched_patterns") or []
+        existing_report.analysis_score = analysis.get("analysis_score")
+        existing_report.engine_version = analysis.get("engine_version")
+        db.commit()
+        db.refresh(existing_report)
+
         return ApiResponse(
             success=True,
             data={
@@ -441,6 +447,9 @@ def create_issue_from_actions_run(
         existing_report.evidence = analysis["evidence"]
         existing_report.suspected_causes = analysis["suspected_causes"]
         existing_report.recommended_actions = analysis["recommended_actions"]
+        existing_report.matched_patterns = analysis.get("matched_patterns") or []
+        existing_report.analysis_score = analysis.get("analysis_score")
+        existing_report.engine_version = analysis.get("engine_version")
         existing_report.issue_title = analysis["issue_title"]
         existing_report.issue_body = issue_body
         existing_report.github_issue_id = issue.get("github_issue_id")
@@ -458,6 +467,9 @@ def create_issue_from_actions_run(
             evidence=analysis["evidence"],
             suspected_causes=analysis["suspected_causes"],
             recommended_actions=analysis["recommended_actions"],
+            matched_patterns=analysis.get("matched_patterns") or [],
+            analysis_score=analysis.get("analysis_score"),
+            engine_version=analysis.get("engine_version"),
             issue_title=analysis["issue_title"],
             issue_body=issue_body,
             github_issue_id=issue.get("github_issue_id"),
