@@ -1,0 +1,22 @@
+name: LogLens Test Failure
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  fail-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Intentional failure for LogLens test
+        run: |
+          echo "This is an intentional failure for LogLens AI test"
+          echo "ERROR: Simulated backend test failure"
+          echo "FAILED: pytest sample_test.py::test_example"
+          exit 1

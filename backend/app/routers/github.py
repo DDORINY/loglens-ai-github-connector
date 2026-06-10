@@ -1,0 +1,230 @@
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+
+from app.core.crypto import decrypt_text, encrypt_text
+from app.core.deps import get_current_user
+from app.db.session import get_db
+from app.models.github_repository import GithubRepository
+from app.models.project import Project
+from app.models.user import User
+from app.schemas.common import ApiResponse
+from app.schemas.github_repository import (
+    GithubRepositoryConnect,
+    GithubRepositoryResponse,
+)
+from app.services.github_service import (
+    download_workflow_run_logs,
+    get_repository,
+    list_workflow_runs,
+)
+
+
+router = APIRouter(prefix="/api/github", tags=["GitHub"])
+
+
+def get_user_repository(
+    repository_id: int,
+    db: Session,
+    current_user: User,
+) -> GithubRepository:
+    repository = (
+        db.query(GithubRepository)
+        .join(Project, Project.id == GithubRepository.project_id)
+        .filter(
+            GithubRepository.id == repository_id,
+            Project.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if not repository:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="GitHub 저장소 연결 정보를 찾을 수 없습니다.",
+        )
+
+    return repository
+
+
+@router.post("/repositories/connect", response_model=ApiResponse)
+def connect_repository(
+    payload: GithubRepositoryConnect,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = (
+        db.query(Project)
+        .filter(Project.id == payload.project_id, Project.user_id == current_user.id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="프로젝트를 찾을 수 없습니다.",
+        )
+
+    repo_info = get_repository(
+        owner=payload.owner,
+        repo=payload.repo,
+        token=payload.access_token,
+    )
+
+    existing = (
+        db.query(GithubRepository)
+        .filter(
+            GithubRepository.project_id == payload.project_id,
+            GithubRepository.owner == payload.owner,
+            GithubRepository.repo == payload.repo,
+        )
+        .first()
+    )
+
+    if existing:
+        existing.default_branch = repo_info.get("default_branch")
+        existing.token_encrypted = encrypt_text(payload.access_token)
+        db.commit()
+        db.refresh(existing)
+
+        return ApiResponse(
+            success=True,
+            data=GithubRepositoryResponse.model_validate(existing),
+            message="GitHub 저장소 연결 정보가 갱신되었습니다.",
+        )
+
+    repository = GithubRepository(
+        project_id=payload.project_id,
+        owner=payload.owner,
+        repo=payload.repo,
+        default_branch=repo_info.get("default_branch"),
+        token_encrypted=encrypt_text(payload.access_token),
+    )
+
+    db.add(repository)
+    db.commit()
+    db.refresh(repository)
+
+    return ApiResponse(
+        success=True,
+        data=GithubRepositoryResponse.model_validate(repository),
+        message="GitHub 저장소가 연결되었습니다.",
+    )
+
+
+@router.get("/repositories", response_model=ApiResponse)
+def list_repositories(
+    project_id: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.user_id == current_user.id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="프로젝트를 찾을 수 없습니다.",
+        )
+
+    repositories = (
+        db.query(GithubRepository)
+        .filter(GithubRepository.project_id == project_id)
+        .order_by(GithubRepository.connected_at.desc())
+        .all()
+    )
+
+    return ApiResponse(
+        success=True,
+        data=[
+            GithubRepositoryResponse.model_validate(repository)
+            for repository in repositories
+        ],
+        message="GitHub 저장소 목록 조회에 성공했습니다.",
+    )
+
+
+@router.get("/repositories/{repository_id}", response_model=ApiResponse)
+def get_connected_repository(
+    repository_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repository = get_user_repository(
+        repository_id=repository_id,
+        db=db,
+        current_user=current_user,
+    )
+
+    return ApiResponse(
+        success=True,
+        data=GithubRepositoryResponse.model_validate(repository),
+        message="GitHub 저장소 상세 조회에 성공했습니다.",
+    )
+
+
+@router.get("/repositories/{repository_id}/actions/runs", response_model=ApiResponse)
+def get_actions_runs(
+    repository_id: int,
+    status_value: str | None = Query(default="completed", alias="status"),
+    conclusion: str | None = Query(default=None),
+    per_page: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repository = get_user_repository(
+        repository_id=repository_id,
+        db=db,
+        current_user=current_user,
+    )
+
+    token = decrypt_text(repository.token_encrypted)
+
+    runs = list_workflow_runs(
+        owner=repository.owner,
+        repo=repository.repo,
+        token=token,
+        status_value=status_value,
+        conclusion=conclusion,
+        per_page=per_page,
+    )
+
+    return ApiResponse(
+        success=True,
+        data=runs,
+        message="GitHub Actions workflow run 목록 조회에 성공했습니다.",
+    )
+
+
+@router.get(
+    "/repositories/{repository_id}/actions/runs/{run_id}/logs",
+    response_model=ApiResponse,
+)
+def get_actions_run_logs(
+    repository_id: int,
+    run_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repository = get_user_repository(
+        repository_id=repository_id,
+        db=db,
+        current_user=current_user,
+    )
+
+    token = decrypt_text(repository.token_encrypted)
+
+    logs = download_workflow_run_logs(
+        owner=repository.owner,
+        repo=repository.repo,
+        token=token,
+        run_id=run_id,
+    )
+
+    return ApiResponse(
+        success=True,
+        data=logs,
+        message="GitHub Actions workflow 로그 조회에 성공했습니다.",
+    )
