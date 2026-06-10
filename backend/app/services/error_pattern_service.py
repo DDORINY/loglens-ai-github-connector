@@ -4,6 +4,12 @@ import re
 from typing import Any
 
 
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+GITHUB_TIMESTAMP_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\s*"
+)
+
+
 ERROR_PATTERNS: list[dict[str, Any]] = [
     {
         "category": "TEST_FAILURE",
@@ -167,6 +173,75 @@ ERROR_PATTERNS: list[dict[str, Any]] = [
 ]
 
 
+def clean_log_line(line: str) -> str:
+    cleaned = ANSI_ESCAPE_RE.sub("", str(line))
+    cleaned = GITHUB_TIMESTAMP_RE.sub("", cleaned)
+    cleaned = cleaned.replace("##[error]", "")
+    cleaned = cleaned.replace("##[warning]", "")
+    cleaned = cleaned.replace("##[group]", "")
+    cleaned = cleaned.replace("##[endgroup]", "")
+    cleaned = cleaned.strip()
+
+    if cleaned.startswith("Run "):
+        cleaned = cleaned[4:].strip()
+
+    echo_match = re.match(r'^echo\s+["\'](.+?)["\']$', cleaned)
+    if echo_match:
+        cleaned = echo_match.group(1).strip()
+
+    return cleaned
+
+
+def is_low_value_evidence(line: str) -> bool:
+    lowered = line.lower().strip()
+
+    if not lowered:
+        return True
+
+    low_value_prefixes = (
+        "run ",
+        "shell:",
+        "env:",
+        "complete job",
+        "prepare workflow directory",
+        "prepare all required actions",
+        "getting action download info",
+    )
+
+    if lowered.startswith(low_value_prefixes):
+        return True
+
+    if lowered in {"echo", "exit 1"}:
+        return True
+
+    return False
+
+
+def evidence_priority(line: str) -> int:
+    lowered = line.lower()
+
+    if "##[error]" in lowered:
+        return 100
+    if "failed:" in lowered:
+        return 95
+    if "error:" in lowered:
+        return 90
+    if "assertionerror" in lowered:
+        return 88
+    if "modulenotfounderror" in lowered or "importerror" in lowered:
+        return 88
+    if "process completed with exit code" in lowered:
+        return 80
+    if "failed" in lowered:
+        return 70
+    if "error" in lowered:
+        return 65
+    if "exception" in lowered:
+        return 60
+
+    return 10
+
+
 def collect_log_text(logs: dict[str, Any]) -> str:
     parts: list[str] = []
 
@@ -242,25 +317,62 @@ def detect_error_pattern(logs: dict[str, Any]) -> dict[str, Any]:
 
 
 def extract_evidence(logs: dict[str, Any], limit: int = 8) -> list[str]:
-    evidence: list[str] = []
+    candidates: list[tuple[int, int, str]] = []
+    seen = set()
+    order = 0
+
+    source_lines: list[str] = []
 
     for line in logs.get("error_lines") or []:
-        text = str(line).strip()
-        if text and text not in evidence:
-            evidence.append(text)
-
-        if len(evidence) >= limit:
-            return evidence
+        source_lines.append(str(line))
 
     raw_log = logs.get("raw_log") or ""
+    source_lines.extend(str(raw_log).splitlines())
 
-    for line in str(raw_log).splitlines():
-        if any(token in line.lower() for token in ["error", "failed", "exception", "exit code"]):
-            text = line.strip()
-            if text and text not in evidence:
-                evidence.append(text)
+    for line in source_lines:
+        cleaned = clean_log_line(line)
 
-        if len(evidence) >= limit:
+        if is_low_value_evidence(cleaned):
+            continue
+
+        priority = evidence_priority(cleaned)
+
+        if priority < 60:
+            continue
+
+        normalized = cleaned.lower()
+
+        if normalized in seen:
+            continue
+
+        seen.add(normalized)
+        candidates.append((priority, order, cleaned))
+        order += 1
+
+    candidates.sort(key=lambda item: (-item[0], item[1]))
+
+    evidence = [item[2] for item in candidates[:limit]]
+
+    if evidence:
+        return evidence
+
+    fallback: list[str] = []
+
+    for line in source_lines:
+        cleaned = clean_log_line(line)
+
+        if is_low_value_evidence(cleaned):
+            continue
+
+        normalized = cleaned.lower()
+
+        if normalized in seen:
+            continue
+
+        seen.add(normalized)
+        fallback.append(cleaned)
+
+        if len(fallback) >= limit:
             break
 
-    return evidence
+    return fallback
