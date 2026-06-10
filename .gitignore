@@ -1,25 +1,26 @@
-# env
-.env
-.env.local
-*.env
-
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
-backend/.venv/
+venv/
+env/
+
+# Env
+.env
+.env.*
+!.env.example
 
 # Node
 node_modules/
 .next/
+out/
 dist/
 build/
 
 # Logs
 *.log
 
-# OS
+# OS / IDE
 .DS_Store
-
-# Docker volumes
-postgres_data/
+.vscode/
+.idea/
