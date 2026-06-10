@@ -5,10 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { clearAuth } from "@/lib/auth";
 
 const links = [
-  { href: "/dashboard", label: "Dashboard", icon: "D" },
-  { href: "/projects", label: "Projects", icon: "P" },
-  { href: "/projects", label: "Repositories", icon: "R" },
-  { href: "/reports", label: "Reports", icon: "A" },
+  { href: "/dashboard", label: "대시보드", icon: "D", section: "dashboard" },
+  { href: "/projects", label: "프로젝트", icon: "P", section: "projects" },
+  { href: "/projects", label: "GitHub 저장소", icon: "R", section: "repositories" },
+  { href: "/reports", label: "분석 리포트", icon: "A", section: "reports" },
 ];
 
 export default function Sidebar() {
@@ -29,7 +29,7 @@ export default function Sidebar() {
       <nav className="mt-5 flex gap-2 overflow-x-auto lg:mt-10 lg:flex-1 lg:flex-col">
         {links.map((link, index) => {
           const active =
-            link.label === "Repositories"
+            link.section === "repositories"
               ? pathname.startsWith("/repositories")
               : pathname === link.href || pathname.startsWith(`${link.href}/`);
           return (
@@ -55,7 +55,7 @@ export default function Sidebar() {
         }}
         className="mt-3 rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-bold text-slate-500 hover:border-red-100 hover:bg-red-50 hover:text-red-600 lg:mt-auto"
       >
-        Logout
+        로그아웃
       </button>
     </aside>
   );

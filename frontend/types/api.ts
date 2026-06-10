@@ -100,6 +100,9 @@ export type ActionsAnalysis = {
   recommended_actions: string[];
   issue_title: string;
   issue_body: string;
+  matched_patterns?: string[];
+  analysis_score?: number;
+  engine_version?: string;
 };
 
 export type AnalysisResponse = {
@@ -139,5 +142,8 @@ export type CIAnalysisReport = {
   github_issue_number: number | null;
   github_issue_url: string | null;
   github_issue_state: string | null;
+  matched_patterns?: string[];
+  analysis_score?: number;
+  engine_version?: string;
   created_at: string;
 };

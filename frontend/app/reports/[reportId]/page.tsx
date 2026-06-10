@@ -63,6 +63,9 @@ export default function ReportDetailPage() {
                 recommended_actions: report.recommended_actions,
                 issue_title: report.issue_title,
                 issue_body: report.issue_body,
+                matched_patterns: report.matched_patterns,
+                analysis_score: report.analysis_score,
+                engine_version: report.engine_version,
               }} />
               <section className="panel p-6">
                 <h2 className="text-xl font-black text-slate-900">저장된 Issue 본문</h2>

@@ -61,8 +61,17 @@ export default function RepositoryDetailPage() {
     void load();
   }, [load]);
 
-  async function loadContext(runId: number, refresh = false) {
+  function selectRun(runId: number) {
+    if (selectedRunId !== null && selectedRunId !== runId) {
+      setLogs(null);
+      setAnalysis(null);
+      setIssueResult(null);
+    }
     setSelectedRunId(runId);
+  }
+
+  async function loadContext(runId: number, refresh = false) {
+    selectRun(runId);
     if (contexts[runId] && !refresh) return;
 
     setBusy({ runId, action: "context" });
@@ -81,7 +90,7 @@ export default function RepositoryDetailPage() {
   }
 
   async function runAction(runId: number, action: "logs" | "analysis" | "issue") {
-    setSelectedRunId(runId);
+    selectRun(runId);
     setBusy({ runId, action });
     setError("");
     try {
@@ -109,7 +118,7 @@ export default function RepositoryDetailPage() {
 
   return (
     <AppShell>
-      <Header title={repository ? `${repository.owner}/${repository.repo}` : "Repository"} description="실패한 workflow run을 살펴보고 로그 분석과 Issue 생성을 실행합니다." />
+      <Header title={repository ? `${repository.owner}/${repository.repo}` : "GitHub 저장소"} description="실패한 Actions run에서 실패 로그, 원인 분석, 커밋/PR 변경사항을 확인하고 GitHub Issue를 생성합니다." />
       {loading ? <LoadingState /> : (
         <>
           <ErrorBox message={error} />
@@ -129,7 +138,7 @@ export default function RepositoryDetailPage() {
           <section className="mt-6 grid gap-6 xl:grid-cols-[380px_1fr]">
             <div>
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-black text-slate-900">실패한 Actions runs</h2>
+                <h2 className="text-xl font-black text-slate-900">실패한 Actions run</h2>
                 <span className="text-sm font-bold text-red-500">{runs.length}</span>
               </div>
               <div className="space-y-4">
@@ -161,7 +170,23 @@ export default function RepositoryDetailPage() {
               )}
               {analysis && <AnalysisPanel analysis={analysis} />}
               {logs && <LogViewer logs={logs} />}
-              {!logs && !analysis && !issueResult && !selectedRunId && !busy && <EmptyState title="분석할 run을 선택하세요" description="왼쪽 run 카드에서 변경사항 분석, 로그 보기, 분석하기 또는 Issue 생성을 실행할 수 있습니다." />}
+              {!logs && !analysis && !issueResult && !selectedRunId && !busy && (
+                <EmptyState
+                  title="실패 run을 선택해 분석을 시작하세요"
+                  description="왼쪽의 실패한 GitHub Actions run에서 원하는 작업을 실행하세요. 권장 순서는 실패 로그 확인 → 원인 분석 → 커밋/PR 확인 → Issue 생성입니다."
+                  action={
+                    <div className="mx-auto max-w-md rounded-2xl border border-teal-100 bg-white p-5 text-left shadow-sm">
+                      <p className="text-sm font-black text-slate-900">권장 분석 순서</p>
+                      <ol className="mt-3 space-y-2 text-sm text-slate-600">
+                        <li>1. 실패 로그 보기</li>
+                        <li>2. 원인 분석하기</li>
+                        <li>3. 커밋/PR 변경사항 확인</li>
+                        <li>4. GitHub Issue 생성</li>
+                      </ol>
+                    </div>
+                  }
+                />
+              )}
             </div>
           </section>
 
