@@ -220,3 +220,79 @@ def create_github_issue(
         "html_url": issue.get("html_url"),
         "created_at": issue.get("created_at"),
     }
+
+
+def get_workflow_run(
+    owner: str,
+    repo: str,
+    token: str,
+    run_id: int,
+) -> dict[str, Any]:
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/actions/runs/{run_id}"
+
+    response = requests.get(
+        url,
+        headers=build_headers(token),
+        timeout=20,
+    )
+
+    handle_github_error(response)
+    return response.json()
+
+
+def get_commit(
+    owner: str,
+    repo: str,
+    token: str,
+    sha: str,
+) -> dict[str, Any]:
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/commits/{sha}"
+
+    response = requests.get(
+        url,
+        headers=build_headers(token),
+        timeout=20,
+    )
+
+    handle_github_error(response)
+    return response.json()
+
+
+def list_pull_requests_for_commit(
+    owner: str,
+    repo: str,
+    token: str,
+    sha: str,
+) -> list[dict[str, Any]]:
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/commits/{sha}/pulls"
+
+    headers = build_headers(token)
+    headers["Accept"] = "application/vnd.github.groot-preview+json"
+
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=20,
+    )
+
+    handle_github_error(response)
+    return response.json()
+
+
+def list_pull_request_files(
+    owner: str,
+    repo: str,
+    token: str,
+    pull_number: int,
+) -> list[dict[str, Any]]:
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pull_number}/files"
+
+    response = requests.get(
+        url,
+        headers=build_headers(token),
+        timeout=20,
+        params={"per_page": 100},
+    )
+
+    handle_github_error(response)
+    return response.json()

@@ -10,12 +10,22 @@ from app.models.project import Project
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.github_issue import GithubIssueCreateFromRun
+from app.services.change_context_service import (
+    calculate_relevance,
+    normalize_commit,
+    normalize_file,
+    normalize_pull_request,
+)
 from app.schemas.github_repository import (
     GithubRepositoryConnect,
     GithubRepositoryResponse,
 )
 from app.services.log_analysis_service import analyze_github_actions_logs
 from app.services.github_service import (
+    list_pull_requests_for_commit,
+    list_pull_request_files,
+    get_workflow_run,
+    get_commit,
     create_github_issue,
     download_workflow_run_logs,
     get_repository,
@@ -393,5 +403,110 @@ def create_issue_from_actions_run(
             "duplicated": False,
         },
         message="GitHub Issue가 생성되고 분석 리포트가 저장되었습니다.",
+    )
+
+
+@router.get(
+    "/repositories/{repository_id}/actions/runs/{run_id}/context",
+    response_model=ApiResponse,
+)
+def get_actions_run_change_context(
+    repository_id: int,
+    run_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repository = get_user_repository(
+        repository_id=repository_id,
+        db=db,
+        current_user=current_user,
+    )
+
+    token = decrypt_text(repository.token_encrypted)
+
+    run = get_workflow_run(
+        owner=repository.owner,
+        repo=repository.repo,
+        token=token,
+        run_id=run_id,
+    )
+
+    head_sha = run.get("head_sha")
+
+    if not head_sha:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow run에서 head_sha를 찾을 수 없습니다.",
+        )
+
+    commit_raw = get_commit(
+        owner=repository.owner,
+        repo=repository.repo,
+        token=token,
+        sha=head_sha,
+    )
+
+    pull_requests_raw = list_pull_requests_for_commit(
+        owner=repository.owner,
+        repo=repository.repo,
+        token=token,
+        sha=head_sha,
+    )
+
+    pull_requests = [
+        normalize_pull_request(pr)
+        for pr in pull_requests_raw
+    ]
+
+    changed_files_raw = []
+
+    if pull_requests:
+        first_pr_number = pull_requests[0].get("number")
+
+        if first_pr_number:
+            changed_files_raw = list_pull_request_files(
+                owner=repository.owner,
+                repo=repository.repo,
+                token=token,
+                pull_number=int(first_pr_number),
+            )
+
+    if not changed_files_raw:
+        changed_files_raw = commit_raw.get("files") or []
+
+    changed_files = [
+        normalize_file(file)
+        for file in changed_files_raw
+    ]
+
+    logs = download_workflow_run_logs(
+        owner=repository.owner,
+        repo=repository.repo,
+        token=token,
+        run_id=run_id,
+    )
+
+    relevance = calculate_relevance(
+        changed_files=changed_files,
+        logs=logs,
+        workflow_name=run.get("name"),
+    )
+
+    return ApiResponse(
+        success=True,
+        data={
+            "repository_id": repository.id,
+            "owner": repository.owner,
+            "repo": repository.repo,
+            "run_id": run_id,
+            "workflow_name": run.get("name"),
+            "head_branch": run.get("head_branch"),
+            "head_sha": head_sha,
+            "commit": normalize_commit(commit_raw),
+            "pull_requests": pull_requests,
+            "changed_files": changed_files,
+            "relevance": relevance,
+        },
+        message="GitHub Actions run 변경사항 컨텍스트 조회에 성공했습니다.",
     )
 
