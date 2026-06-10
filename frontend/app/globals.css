@@ -1,26 +1,91 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3fbfa;
+  --foreground: #12343b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+a,
+input,
+textarea {
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+.panel {
+  border: 1px solid #ddeeef;
+  border-radius: 1.5rem;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(15, 118, 110, 0.08);
+}
+
+.input {
+  width: 100%;
+  border: 1px solid #dcebea;
+  border-radius: 1rem;
+  background: #fff;
+  padding: 0.8rem 1rem;
+  color: #1e293b;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #14b8a6;
+  padding: 0.75rem 1.25rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.btn-primary:hover {
+  background: #0d9488;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccfbf1;
+  border-radius: 9999px;
+  background: #fff;
+  padding: 0.75rem 1.25rem;
+  color: #0f766e;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.btn-secondary:hover {
+  background: #f0fdfa;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }

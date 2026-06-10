@@ -1,0 +1,107 @@
+export type ApiResponse<T> = {
+  success: boolean;
+  data: T | null;
+  message: string | null;
+};
+
+export type AuthUser = {
+  id: number;
+  email: string;
+  created_at: string;
+};
+
+export type LoginData = {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+};
+
+export type Project = {
+  id: number;
+  user_id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+};
+
+export type GithubRepository = {
+  id: number;
+  project_id: number;
+  owner: string;
+  repo: string;
+  default_branch: string | null;
+  connected_at: string;
+};
+
+export type WorkflowRun = {
+  github_run_id: number;
+  workflow_name: string | null;
+  status: string | null;
+  conclusion: string | null;
+  event: string | null;
+  head_branch: string | null;
+  head_sha: string | null;
+  run_number: number | null;
+  run_attempt: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+  html_url: string | null;
+};
+
+export type WorkflowLogs = {
+  run_id: number;
+  raw_log: string;
+  error_lines: string[];
+  files: { file_name: string; content: string }[];
+};
+
+export type ActionsAnalysis = {
+  category: string;
+  summary: string;
+  confidence: string;
+  evidence: string[];
+  suspected_causes: string[];
+  recommended_actions: string[];
+  issue_title: string;
+  issue_body: string;
+};
+
+export type AnalysisResponse = {
+  repository_id: number;
+  owner: string;
+  repo: string;
+  run_id: number;
+  analysis: ActionsAnalysis;
+};
+
+export type IssueCreateResponse = AnalysisResponse & {
+  issue: {
+    github_issue_id: number | null;
+    number: number | null;
+    title: string | null;
+    state: string | null;
+    html_url: string | null;
+    created_at?: string | null;
+  };
+  report_id: number;
+  duplicated: boolean;
+};
+
+export type CIAnalysisReport = {
+  id: number;
+  repository_id: number;
+  github_run_id: number;
+  category: string;
+  summary: string;
+  confidence: string;
+  evidence: string[];
+  suspected_causes: string[];
+  recommended_actions: string[];
+  issue_title: string;
+  issue_body: string;
+  github_issue_id: number | null;
+  github_issue_number: number | null;
+  github_issue_url: string | null;
+  github_issue_state: string | null;
+  created_at: string;
+};
