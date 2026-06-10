@@ -181,3 +181,42 @@ def extract_error_lines(log_text: str, limit: int = 80) -> list[str]:
             break
 
     return lines
+
+
+def create_github_issue(
+    owner: str,
+    repo: str,
+    token: str,
+    title: str,
+    body: str,
+    labels: list[str] | None = None,
+) -> dict[str, Any]:
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues"
+
+    payload: dict[str, Any] = {
+        "title": title,
+        "body": body,
+    }
+
+    if labels:
+        payload["labels"] = labels
+
+    response = requests.post(
+        url,
+        headers=build_headers(token),
+        json=payload,
+        timeout=20,
+    )
+
+    handle_github_error(response)
+
+    issue = response.json()
+
+    return {
+        "github_issue_id": issue.get("id"),
+        "number": issue.get("number"),
+        "title": issue.get("title"),
+        "state": issue.get("state"),
+        "html_url": issue.get("html_url"),
+        "created_at": issue.get("created_at"),
+    }
