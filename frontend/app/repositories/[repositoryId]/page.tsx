@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import AnalysisPanel from "@/components/AnalysisPanel";
 import Badge from "@/components/Badge";
+import ChangeContextPanel from "@/components/ChangeContextPanel";
 import EmptyState from "@/components/EmptyState";
 import ErrorBox from "@/components/ErrorBox";
 import Header from "@/components/Header";
@@ -15,7 +16,7 @@ import ReportCard from "@/components/ReportCard";
 import WorkflowRunCard from "@/components/WorkflowRunCard";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import type { ActionsAnalysis, AnalysisResponse, CIAnalysisReport, GithubRepository, IssueCreateResponse, WorkflowLogs, WorkflowRun } from "@/types/api";
+import type { ActionsAnalysis, AnalysisResponse, ChangeContext, CIAnalysisReport, GithubRepository, IssueCreateResponse, WorkflowLogs, WorkflowRun } from "@/types/api";
 
 export default function RepositoryDetailPage() {
   const { repositoryId } = useParams<{ repositoryId: string }>();
@@ -27,6 +28,7 @@ export default function RepositoryDetailPage() {
   const [logs, setLogs] = useState<WorkflowLogs | null>(null);
   const [analysis, setAnalysis] = useState<ActionsAnalysis | null>(null);
   const [issueResult, setIssueResult] = useState<IssueCreateResponse | null>(null);
+  const [contexts, setContexts] = useState<Record<number, ChangeContext>>({});
   const [busy, setBusy] = useState<{ runId: number; action: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -58,6 +60,25 @@ export default function RepositoryDetailPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
+
+  async function loadContext(runId: number, refresh = false) {
+    setSelectedRunId(runId);
+    if (contexts[runId] && !refresh) return;
+
+    setBusy({ runId, action: "context" });
+    setError("");
+    try {
+      const response = await apiFetch<ChangeContext>(
+        `/api/github/repositories/${id}/actions/runs/${runId}/context`
+      );
+      if (!response.data) throw new Error("변경사항 분석 응답이 비어 있습니다.");
+      setContexts((current) => ({ ...current, [runId]: response.data as ChangeContext }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "변경사항 컨텍스트를 불러오지 못했습니다.");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function runAction(runId: number, action: "logs" | "analysis" | "issue") {
     setSelectedRunId(runId);
@@ -118,6 +139,8 @@ export default function RepositoryDetailPage() {
                     run={run}
                     selected={selectedRunId === run.github_run_id}
                     busyAction={busy?.runId === run.github_run_id ? busy.action : null}
+                    hasContext={Boolean(contexts[run.github_run_id])}
+                    onContext={() => void loadContext(run.github_run_id)}
                     onLogs={() => void runAction(run.github_run_id, "logs")}
                     onAnalyze={() => void runAction(run.github_run_id, "analysis")}
                     onIssue={() => void runAction(run.github_run_id, "issue")}
@@ -127,11 +150,18 @@ export default function RepositoryDetailPage() {
             </div>
 
             <div className="space-y-5">
-              {busy && <LoadingState label={busy.action === "logs" ? "로그를 다운로드하는 중입니다..." : busy.action === "analysis" ? "실패 원인을 분석하는 중입니다..." : "GitHub Issue를 생성하는 중입니다..."} />}
+              {busy && <LoadingState label={busy.action === "context" ? "변경사항과 실패 로그의 연관도를 분석하는 중입니다..." : busy.action === "logs" ? "로그를 다운로드하는 중입니다..." : busy.action === "analysis" ? "실패 원인을 분석하는 중입니다..." : "GitHub Issue를 생성하는 중입니다..."} />}
               {issueResult && <IssueResultCard result={issueResult} />}
+              {selectedRunId && contexts[selectedRunId] && (
+                <ChangeContextPanel
+                  context={contexts[selectedRunId]}
+                  refreshing={busy?.runId === selectedRunId && busy.action === "context"}
+                  onRefresh={() => void loadContext(selectedRunId, true)}
+                />
+              )}
               {analysis && <AnalysisPanel analysis={analysis} />}
               {logs && <LogViewer logs={logs} />}
-              {!logs && !analysis && !issueResult && !busy && <EmptyState title="분석할 run을 선택하세요" description="왼쪽 run 카드에서 로그 보기, 분석하기 또는 Issue 생성을 실행할 수 있습니다." />}
+              {!logs && !analysis && !issueResult && !selectedRunId && !busy && <EmptyState title="분석할 run을 선택하세요" description="왼쪽 run 카드에서 변경사항 분석, 로그 보기, 분석하기 또는 Issue 생성을 실행할 수 있습니다." />}
             </div>
           </section>
 

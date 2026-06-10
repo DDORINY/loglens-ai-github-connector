@@ -6,6 +6,8 @@ export default function WorkflowRunCard({
   run,
   selected,
   busyAction,
+  hasContext,
+  onContext,
   onLogs,
   onAnalyze,
   onIssue,
@@ -13,6 +15,8 @@ export default function WorkflowRunCard({
   run: WorkflowRun;
   selected: boolean;
   busyAction: string | null;
+  hasContext: boolean;
+  onContext: () => void;
   onLogs: () => void;
   onAnalyze: () => void;
   onIssue: () => void;
@@ -33,7 +37,10 @@ export default function WorkflowRunCard({
       </div>
       <p className="mt-4 text-xs text-slate-400">{formatDate(run.created_at)}</p>
       {run.html_url && <a href={run.html_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-teal-600 hover:underline">GitHub Actions에서 보기 ↗</a>}
-      <div className="mt-5 grid grid-cols-3 gap-2">
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <button onClick={onContext} disabled={Boolean(busyAction)} className="rounded-full border border-teal-100 px-2 py-2 text-xs font-bold text-teal-700 hover:bg-teal-50 disabled:opacity-50">
+          {busyAction === "context" ? "분석 중..." : hasContext ? "변경사항 보기" : "변경사항 분석"}
+        </button>
         <button onClick={onLogs} disabled={Boolean(busyAction)} className="rounded-full border border-teal-100 px-2 py-2 text-xs font-bold text-teal-700 hover:bg-teal-50 disabled:opacity-50">
           {busyAction === "logs" ? "로딩..." : "로그"}
         </button>

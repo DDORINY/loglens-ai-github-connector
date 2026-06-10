@@ -55,6 +55,42 @@ export type WorkflowLogs = {
   files: { file_name: string; content: string }[];
 };
 
+export type ChangeContext = {
+  repository_id: number;
+  owner: string;
+  repo: string;
+  run_id: number;
+  workflow_name: string | null;
+  head_branch: string | null;
+  head_sha: string;
+  commit: {
+    sha: string | null;
+    message: string | null;
+    author: string | null;
+    committed_at: string | null;
+    html_url: string | null;
+  };
+  pull_requests: {
+    number: number;
+    title: string | null;
+    state: string | null;
+    merged_at: string | null;
+    html_url: string | null;
+  }[];
+  changed_files: {
+    filename: string | null;
+    status: string | null;
+    additions: number;
+    deletions: number;
+    changes: number;
+  }[];
+  relevance: {
+    score: number;
+    reasons: string[];
+    matched_keywords: string[];
+  };
+};
+
 export type ActionsAnalysis = {
   category: string;
   summary: string;
