@@ -1,295 +1,499 @@
 # LogLens AI GitHub Connector
 
-## 1. 프로젝트 소개
+GitHub Actions 실패 로그와 서버 로그를 분석하고, 커밋·Pull Request 변경사항 및 발생 시간대를 함께 비교해 장애 원인 후보와 조치 항목을 제공하는 개발자용 AIOps 보조 플랫폼입니다.
 
-**LogLens AI GitHub Connector**는 GitHub Actions 실패 로그와 운영 서버 로그를 분석하고, 최근 PR·커밋 변경사항과 연결해 AI가 장애 원인 후보, 확인 절차, 재발 방지책, GitHub Issue를 자동 생성하는 개발자용 AIOps 보조 플랫폼입니다.
+현재 분석 기능은 외부 AI API를 호출하지 않는 **rule-based analysis engine**으로 구현되어 있습니다. 분석 결과를 재현 가능하게 만들고, 원인을 단정하는 대신 근거·점수·원인 후보·권장 조치를 분리해 제공합니다.
 
-단순히 로그를 요약하는 서비스가 아니라, 개발자가 장애 상황에서 반복적으로 수행하는 **로그 확인 → 변경 이력 추적 → 원인 후보 정리 → 리포트 작성 → Issue 생성** 과정을 자동화하는 것을 목표로 합니다.
+## 프로젝트 소개
 
----
+장애 대응 과정에서는 보통 다음 작업이 반복됩니다.
 
-## 2. 프로젝트 배경
-
-개발 프로젝트에서는 다음과 같은 문제가 자주 발생합니다.
-
-* GitHub Actions 빌드/테스트/배포 실패 로그가 길고 복잡함
-* 운영 서버에서 500, 502, 503, 504 오류가 발생했을 때 원인 추적이 어려움
-* 장애 발생 시간과 최근 PR·커밋·배포 이력을 사람이 직접 비교해야 함
-* 장애 보고서와 GitHub Issue를 수동으로 작성해야 함
-* 주니어 개발자는 어떤 로그와 변경사항을 먼저 봐야 하는지 판단하기 어려움
-
-이 프로젝트는 이러한 문제를 해결하기 위해 **GitHub Actions 분석, 서버 로그 분석, AI 장애 리포트 생성, GitHub Issue 자동 생성**을 하나의 흐름으로 연결합니다.
-
----
-
-## 3. 핵심 가치
-
-이 프로젝트의 핵심 인사이트는 다음과 같습니다.
-
-> 로그는 증상이고, GitHub 변경 이력은 원인 후보입니다.
-
-따라서 장애 분석은 로그만 보는 것이 아니라, 장애 발생 시점 전후의 PR, 커밋, Actions 실패 로그를 함께 분석해야 합니다.
-
-또한 AI는 장애 원인을 단정하지 않고 다음 정보를 제공합니다.
-
-* 원인 후보
-* 판단 근거
-* 신뢰도
-* 확인 절차
-* 조치 항목
-* 재발 방지책
-
----
-
-## 4. 주요 기능
-
-### 4.1 GitHub 저장소 연결
-
-* GitHub 저장소 owner/repo 등록
-* GitHub Personal Access Token 기반 연결
-* 최근 workflow run 조회
-* 최근 PR 조회
-* 최근 commit 조회
-* GitHub Issue 생성
-
----
-
-### 4.2 GitHub Actions 실패 분석
-
-* 실패한 workflow run 감지
-* 실패 로그 다운로드
-* build/test/deploy 실패 원인 요약
-* TypeScript, ESLint, pytest, Docker build 등 오류 유형 분석
-* AI 기반 수정 방향 제안
-* GitHub Issue 자동 생성
-
----
-
-### 4.3 서버 로그 업로드 및 분석
-
-* `.log`, `.txt`, `.jsonl`, `.csv` 로그 파일 업로드
-* 로그 라인 파싱
-* ERROR/WARN/CRITICAL 집계
-* HTTP 5xx 오류 탐지
-* 에러 그룹핑
-* 장애 후보 탐지
-
----
-
-### 4.4 장애 후보 탐지
-
-다음 조건을 기반으로 장애 후보를 탐지합니다.
-
-| 조건                    | 판단                 |
-| --------------------- | ------------------ |
-| 5분 내 ERROR 30건 이상     | 장애 후보              |
-| 특정 API 500 오류 10건 이상  | API 장애 후보          |
-| 동일 에러 20회 이상 반복       | 반복 장애 후보           |
-| 502/503/504 급증        | 외부 연동 또는 프록시 장애 후보 |
-| DB timeout 반복         | DB 장애 후보           |
-| connection refused 반복 | 서비스 다운 후보          |
-
----
-
-### 4.5 GitHub 변경사항 연관 분석
-
-장애 발생 시간 기준으로 최근 PR과 커밋을 조회합니다.
-
-분석 대상:
-
-* 최근 병합된 PR
-* 최근 commit
-* 변경 파일 목록
-* PR 제목/본문
-* Actions 실패 내역
-
-이를 바탕으로 장애 로그와 코드 변경사항의 연관 가능성을 분석합니다.
-
----
-
-### 4.6 AI 장애 리포트 생성
-
-AI는 다음 구조의 장애 리포트를 생성합니다.
-
-* 장애 개요
-* 영향 범위
-* 주요 로그 패턴
-* 관련 GitHub 변경사항
-* 원인 후보
-* 확인 작업
-* 조치 제안
-* 재발 방지
-
----
-
-### 4.7 GitHub Issue 자동 생성
-
-사용자가 승인하면 AI가 생성한 장애 리포트를 GitHub Issue로 등록합니다.
-
-예시 Issue 제목:
-
-```txt
-[INCIDENT] CCTV stream API 500 after AI VM relay changes
-```
-
----
-
-## 5. 서비스 흐름
-
-### GitHub Actions 실패 분석 흐름
-
-```txt
-GitHub 저장소 연결
-→ 최근 workflow run 조회
-→ failed workflow 감지
-→ 실패 로그 다운로드
-→ AI 실패 원인 분석
-→ 수정 체크리스트 생성
+```text
+실패한 Actions run 확인
+→ 원본 로그에서 핵심 오류 탐색
+→ 최근 커밋과 PR 변경 파일 확인
+→ 서버 로그와 발생 시간 비교
+→ 원인 후보 및 조치 내용 작성
 → GitHub Issue 생성
 ```
 
-### 서버 로그 기반 장애 분석 흐름
+LogLens는 이 흐름을 하나의 서비스로 연결합니다.
 
-```txt
+- GitHub 저장소 및 Actions run 조회
+- 실패 로그 다운로드와 핵심 패턴 분석
+- head SHA 기준 커밋, PR, 변경 파일 조회
+- 서버 로그 업로드, 오류 그룹핑 및 category 분류
+- CI 리포트와 서버 로그 리포트의 자동 후보 추천
+- 통합 장애 리포트 생성
+- 분석 결과 기반 GitHub Issue 생성
+
+> 로그는 증상이고, 코드 변경 이력은 원인 후보입니다.
+
+## 핵심 문제
+
+### 1. 실패 로그가 길고 핵심 원인을 찾기 어렵다
+
+GitHub Actions 로그에는 빌드 출력, 설치 로그, timestamp, ANSI 색상 코드가 섞여 있습니다. 개발자는 실제 실패 원인을 보여주는 몇 줄을 찾기 위해 전체 로그를 반복해서 확인해야 합니다.
+
+LogLens는 패턴 매칭을 통해 실패 category, 핵심 근거 로그, 원인 후보와 권장 조치를 구조화합니다.
+
+### 2. 로그와 코드 변경사항이 분리되어 있다
+
+오류가 발생하면 개발자는 GitHub Actions, commit, PR, 변경 파일을 각각 이동하며 확인합니다.
+
+LogLens는 Actions run의 `head_sha`를 기준으로 관련 commit, PR과 변경 파일을 조회하고 로그 키워드와의 연관 점수를 제공합니다.
+
+### 3. CI 실패와 서버 장애의 시간적 연관성을 사람이 판단해야 한다
+
+CI 분석 리포트와 서버 로그 분석 리포트가 별도로 존재하면 어떤 서버 로그가 해당 실패와 관련 있는지 판단하기 어렵습니다.
+
+LogLens는 같은 프로젝트의 최근 서버 로그 분석 리포트를 대상으로 category와 발생 시간 차이를 계산해 통합 장애 후보를 추천합니다.
+
+### 4. 장애 보고와 후속 작업 작성이 반복된다
+
+분석 결과를 다시 정리해 Issue나 장애 보고서로 작성하는 작업은 시간이 오래 걸리고 형식도 일정하지 않습니다.
+
+LogLens는 근거, 원인 후보, 권장 조치가 포함된 분석 리포트와 GitHub Issue를 생성하고 이력을 저장합니다.
+
+## 기능 흐름
+
+### GitHub Actions 실패 분석
+
+```text
+프로젝트 생성
+→ GitHub 저장소 연결
+→ 실패한 Actions run 조회
+→ 실패 로그 확인
+→ Analysis Engine v2 원인 분석
+→ 커밋/PR 변경사항 확인
+→ GitHub Issue 및 분석 리포트 생성
+```
+
+Actions 분석 결과:
+
+- `category`
+- `summary`
+- `confidence`
+- `evidence`
+- `suspected_causes`
+- `recommended_actions`
+- `matched_patterns`
+- `analysis_score`
+- `engine_version`
+
+### 변경사항 컨텍스트 분석
+
+```text
+Actions run의 head SHA 확인
+→ GitHub commit 조회
+→ 연결된 Pull Request 조회
+→ PR 또는 commit 변경 파일 조회
+→ 실패 로그 키워드와 파일 경로 비교
+→ relevance score와 판단 근거 생성
+```
+
+커밋 해시는 실제 GitHub commit 페이지와 연결되며 새 탭에서 전체 diff를 확인할 수 있습니다.
+
+### 서버 로그 분석
+
+```text
 서버 로그 업로드
-→ 로그 파싱
-→ 에러 그룹핑
-→ 장애 후보 탐지
-→ 장애 발생 시간 계산
-→ 최근 PR/커밋 조회
-→ AI 장애 리포트 생성
-→ GitHub Issue 생성
+→ 오류 라인 추출
+→ severity 판정
+→ 유사 오류 fingerprint 그룹핑
+→ category 분류
+→ 원인 후보 및 권장 조치 생성
+→ 서버 로그 분석 리포트 저장
 ```
 
----
+지원 파일 형식:
 
-## 6. 기술 스택
+- `.log`
+- `.txt`
 
-| 영역        | 기술                                              |
-| --------- | ----------------------------------------------- |
-| Frontend  | Next.js, TypeScript                             |
-| Backend   | FastAPI                                         |
-| Database  | PostgreSQL                                      |
-| ORM       | SQLAlchemy                                      |
-| AI API    | OpenAI API 또는 Gemini API                        |
-| 인증        | JWT                                             |
-| GitHub 연동 | GitHub REST API                                 |
-| 로그 파싱     | Python regex, pandas                            |
-| 차트        | Recharts                                        |
-| 리포트       | Markdown, PDF                                   |
-| 배포        | Docker Compose                                  |
-| 고도화       | Chrome Extension, GitHub Webhook, Slack Webhook |
+파일 크기는 최대 2MB이며 UTF-8 또는 CP949 텍스트를 처리합니다.
 
----
+주요 서버 로그 category:
 
-## 7. 시스템 아키텍처
+- `DATABASE_ERROR`
+- `NETWORK_ERROR`
+- `HTTP_5XX_ERROR`
+- `AUTH_ERROR`
+- `PERMISSION_ERROR`
+- `APPLICATION_ERROR`
+- `UNKNOWN_LOG_PATTERN`
 
-```txt
-[Frontend - Next.js]
-  ├─ Dashboard
-  ├─ Project Management
-  ├─ GitHub Repository Connect
-  ├─ Actions Failure Viewer
-  ├─ Log Upload
-  ├─ Incident List
-  ├─ Incident Detail
-  ├─ AI Report Viewer
-  └─ GitHub Issue Create
+### 통합 장애 후보 추천
 
-[Backend - FastAPI]
-  ├─ Auth API
-  ├─ Project API
-  ├─ GitHub Connector
-  ├─ Actions Log Collector
-  ├─ Log Upload API
-  ├─ Log Parser
-  ├─ Error Grouping Service
-  ├─ Incident Detection Service
-  ├─ AI Analysis Service
-  ├─ Report Generator
-  └─ GitHub Issue Creator
-
-[Database - PostgreSQL]
-  ├─ users
-  ├─ projects
-  ├─ github_repositories
-  ├─ github_workflow_runs
-  ├─ log_entries
-  ├─ error_groups
-  ├─ incidents
-  ├─ incident_reports
-  └─ incident_github_links
+```text
+GitHub Actions 분석 리포트 선택
+→ 같은 프로젝트의 최근 서버 로그 리포트 조회
+→ category match score 계산
+→ time match score 계산
+→ candidate score 계산
+→ 점수가 높은 후보 순으로 추천
+→ 1순위 후보로 통합 장애 리포트 생성
 ```
 
----
+후보 점수 계산:
 
-## 8. MVP 범위
-
-### 1차 MVP
-
-* 회원가입/로그인
-* 프로젝트 생성
-* GitHub 저장소 연결
-* GitHub Actions 실패 workflow 조회
-* 실패 로그 다운로드
-* AI 실패 원인 요약
-* GitHub Issue 생성
-
-### 2차 MVP
-
-* 서버 로그 업로드
-* 로그 파싱
-* 에러 그룹핑
-* 장애 후보 탐지
-* 장애 리포트 생성
-
-### 3차 MVP
-
-* 장애 발생 시간 기준 최근 PR/커밋 조회
-* GitHub 변경사항 연관 분석
-* AI 장애 리포트 고도화
-* Markdown/PDF 리포트 다운로드
-
-### 고도화
-
-* Chrome Extension
-* GitHub Webhook
-* Slack 알림
-* 유사 장애 검색
-* GitHub App 전환
-
----
-
-## 9. 포트폴리오 설명 문장
-
-> LogLens AI GitHub Connector는 GitHub Actions 실패 로그와 운영 서버 로그를 분석해 장애 후보를 탐지하고, 최근 PR·커밋 변경사항과 연결하여 AI가 원인 후보, 확인 절차, 재발 방지책이 포함된 장애 리포트와 GitHub Issue를 자동 생성하는 개발자용 AIOps 보조 플랫폼입니다.
-
----
-
-## 10. 프로젝트 차별점
-
-* 단순 로그 요약기가 아니라 GitHub 변경 이력과 연결
-* GitHub Actions 실패 로그를 AI가 분석
-* 운영 로그 기반 장애 후보 탐지
-* AI가 원인 후보와 확인 절차를 분리해서 제공
-* GitHub Issue 자동 생성으로 실제 작업 항목까지 연결
-* 향후 Chrome Extension, Slack, Webhook으로 확장 가능
-
----
-
-## 11. 실행 예시
-
-```txt
-1. 사용자가 GitHub 저장소를 연결한다.
-2. 최근 failed workflow를 조회한다.
-3. 실패 로그를 다운로드한다.
-4. AI가 실패 원인과 수정 방향을 요약한다.
-5. 사용자가 Issue 생성 버튼을 누른다.
-6. GitHub 저장소에 장애/오류 Issue가 자동 등록된다.
+```text
+candidate_score
+= category_match_score × 0.60
++ time_match_score × 0.40
 ```
 
----
+시간 점수 정책:
 
-## 12. 최종 목표
+| 시간 차이 | 점수 |
+| --- | ---: |
+| 0~30분 | 100 |
+| 30분 초과~2시간 | 80 |
+| 2시간 초과~6시간 | 60 |
+| 6시간 초과~24시간 | 30 |
+| 24시간 초과 | 10 |
 
-개발자가 오류 발생 후 GitHub와 서버 로그를 직접 오가며 확인하지 않아도, 시스템이 실패 로그와 변경 이력을 자동으로 수집하고 AI가 원인 후보와 조치 방향을 정리해주는 개발자용 AI 장애 대응 도구를 만드는 것이 목표입니다.
+통합 장애 리포트는 다음 정보를 제공합니다.
+
+- 통합 summary
+- combined evidence
+- root cause candidates
+- recommended actions
+- severity
+- analysis score
+- 사용된 CI/서버 로그 리포트 연결 정보
+
+## 아키텍처
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│ Frontend: Next.js 16 + React 19 + TypeScript + Tailwind │
+│                                                          │
+│ Dashboard / Projects / Repositories / Reports            │
+│ Server Logs / Incident Candidates / Incident Reports     │
+└───────────────────────────┬──────────────────────────────┘
+                            │ JWT Bearer Token
+                            ▼
+┌──────────────────────────────────────────────────────────┐
+│ Backend: FastAPI + SQLAlchemy                            │
+│                                                          │
+│ Auth API                                                 │
+│ Project API                                              │
+│ GitHub Connector ───────────────► GitHub REST API        │
+│ Actions Analysis Engine v2                               │
+│ Change Context Service                                   │
+│ Server Log Analysis Engine v1                            │
+│ Incident Recommendation Engine v1                        │
+│ GitHub Issue Creator                                     │
+└───────────────────────────┬──────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────┐
+│ PostgreSQL 16                                            │
+│                                                          │
+│ users / projects / github_repositories                   │
+│ ci_analysis_reports / server_logs                        │
+│ server_log_analysis_reports / incident_reports           │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 기술 스택
+
+| 영역 | 기술 |
+| --- | --- |
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| Backend | FastAPI, Pydantic 2 |
+| Database | PostgreSQL 16 |
+| ORM / Migration | SQLAlchemy 2, Alembic |
+| 인증 | JWT Bearer Authentication |
+| GitHub 연동 | GitHub REST API |
+| 로그 분석 | Python regex 기반 rule engine |
+| 보안 | Fernet PAT 암호화, 민감정보 마스킹 |
+| 개발 환경 | Docker Compose, Uvicorn |
+
+## API 목록
+
+모든 주요 API는 `/api` prefix를 사용하며 인증이 필요한 요청에는 다음 헤더가 필요합니다.
+
+```http
+Authorization: Bearer {access_token}
+```
+
+### 인증
+
+| Method | Endpoint | 설명 |
+| --- | --- | --- |
+| `POST` | `/api/auth/signup` | 회원가입 |
+| `POST` | `/api/auth/login` | 로그인 및 JWT 발급 |
+| `GET` | `/api/auth/me` | 현재 사용자 조회 |
+
+### 프로젝트
+
+| Method | Endpoint | 설명 |
+| --- | --- | --- |
+| `POST` | `/api/projects` | 프로젝트 생성 |
+| `GET` | `/api/projects` | 프로젝트 목록 |
+| `GET` | `/api/projects/{projectId}` | 프로젝트 상세 |
+| `PATCH` | `/api/projects/{projectId}` | 프로젝트 수정 |
+| `DELETE` | `/api/projects/{projectId}` | 프로젝트 삭제 |
+
+### GitHub 및 Actions
+
+| Method | Endpoint | 설명 |
+| --- | --- | --- |
+| `POST` | `/api/github/repositories/connect` | GitHub 저장소 연결 |
+| `GET` | `/api/github/repositories?project_id={id}` | 프로젝트 저장소 목록 |
+| `GET` | `/api/github/repositories/{repositoryId}` | 저장소 상세 |
+| `GET` | `/api/github/repositories/{repositoryId}/actions/runs` | Actions run 조회 |
+| `GET` | `/api/github/repositories/{repositoryId}/actions/runs/{runId}/logs` | 실패 로그 조회 |
+| `GET` | `/api/github/repositories/{repositoryId}/actions/runs/{runId}/analysis` | 실패 원인 분석 |
+| `GET` | `/api/github/repositories/{repositoryId}/actions/runs/{runId}/context` | 커밋·PR 변경사항 분석 |
+| `POST` | `/api/github/repositories/{repositoryId}/actions/runs/{runId}/issues` | GitHub Issue 생성 |
+
+### Actions 분석 리포트
+
+| Method | Endpoint | 설명 |
+| --- | --- | --- |
+| `GET` | `/api/analysis-reports?repository_id={id}` | 저장소별 리포트 목록 |
+| `GET` | `/api/analysis-reports/{reportId}` | 리포트 상세 |
+
+### 서버 로그
+
+| Method | Endpoint | 설명 |
+| --- | --- | --- |
+| `POST` | `/api/server-logs/upload` | 서버 로그 업로드 |
+| `GET` | `/api/server-logs?project_id={id}` | 프로젝트 서버 로그 목록 |
+| `GET` | `/api/server-logs/{logId}` | 서버 로그 상세 |
+| `POST` | `/api/server-logs/{logId}/analyze` | 서버 로그 분석 |
+| `GET` | `/api/server-logs/{logId}/reports` | 로그별 분석 리포트 목록 |
+| `GET` | `/api/server-logs/reports/{reportId}` | 서버 로그 리포트 상세 |
+
+### 통합 장애 리포트
+
+| Method | Endpoint | 설명 |
+| --- | --- | --- |
+| `POST` | `/api/incidents` | CI/서버 로그 리포트 ID로 통합 리포트 생성 |
+| `GET` | `/api/incidents?project_id={id}` | 프로젝트 통합 리포트 목록 |
+| `GET` | `/api/incidents/{incidentId}` | 통합 리포트 상세 |
+| `GET` | `/api/incidents/candidates?project_id={id}&github_analysis_report_id={reportId}&limit=5` | 서버 로그 후보 추천 |
+| `POST` | `/api/incidents/auto` | 추천 1순위 후보로 통합 리포트 자동 생성 |
+
+### 상태 확인
+
+| Method | Endpoint | 설명 |
+| --- | --- | --- |
+| `GET` | `/health` | API 상태 확인 |
+| `GET` | `/db-health` | PostgreSQL 연결 확인 |
+
+## DB 구조
+
+### ERD
+
+```text
+users
+  1 ─── N projects
+
+projects
+  1 ─── N github_repositories
+  1 ─── N server_logs
+  1 ─── N server_log_analysis_reports
+  1 ─── N incident_reports
+
+github_repositories
+  1 ─── N ci_analysis_reports
+
+server_logs
+  1 ─── N server_log_analysis_reports
+
+ci_analysis_reports
+  1 ─── N incident_reports
+
+server_log_analysis_reports
+  1 ─── N incident_reports
+```
+
+### 주요 테이블
+
+| 테이블 | 역할 | 주요 필드 |
+| --- | --- | --- |
+| `users` | 사용자 계정 | `email`, `password_hash` |
+| `projects` | 분석 단위 프로젝트 | `user_id`, `name`, `description` |
+| `github_repositories` | GitHub 저장소 연결 | `project_id`, `owner`, `repo`, `token_encrypted` |
+| `ci_analysis_reports` | Actions 분석 및 Issue 이력 | `github_run_id`, `category`, `evidence`, `analysis_score`, `engine_version` |
+| `server_logs` | 업로드된 서버 로그 원본 | `project_id`, `filename`, `raw_content` |
+| `server_log_analysis_reports` | 서버 로그 분석 결과 | `category`, `severity`, `error_groups`, `analysis_score` |
+| `incident_reports` | CI와 서버 로그를 연결한 통합 리포트 | `combined_evidence`, `root_cause_candidates`, `recommended_actions` |
+
+`incident_reports`는 다음 세 필드 조합에 unique constraint를 적용합니다.
+
+```text
+project_id
++ github_analysis_report_id
++ server_log_analysis_report_id
+```
+
+따라서 같은 분석 조합을 반복 생성해도 중복 데이터가 쌓이지 않고 기존 리포트를 반환합니다.
+
+구조화된 evidence, error group, 원인 후보 및 권장 조치는 PostgreSQL `JSONB`로 저장합니다.
+
+## 시연 시나리오
+
+### 시나리오 1. GitHub Actions 실패 분석과 Issue 생성
+
+1. 회원가입 후 로그인합니다.
+2. 프로젝트를 생성합니다.
+3. GitHub 저장소 owner, repo, PAT를 입력해 저장소를 연결합니다.
+4. 저장소 화면에서 실패한 Actions run을 조회합니다.
+5. 커밋 해시 또는 브랜치로 run을 검색합니다.
+6. `실패 로그`에서 GitHub Actions 원본 로그를 확인합니다.
+7. `원인 분석`에서 score, category, 핵심 근거 로그와 감지 패턴을 확인합니다.
+8. `커밋/PR 보기`에서 commit, PR, 변경 파일과 relevance score를 확인합니다.
+9. `Issue 생성`으로 GitHub Issue와 Actions 분석 리포트를 저장합니다.
+
+### 시나리오 2. 서버 로그 분석
+
+1. 서버 로그 화면에서 프로젝트와 로그 파일을 선택합니다.
+2. 로그를 업로드합니다.
+3. 분석을 실행해 severity, category, 핵심 근거와 반복 오류 그룹을 확인합니다.
+4. 서버 로그 분석 리포트 상세에서 원인 후보와 권장 조치를 확인합니다.
+
+### 시나리오 3. 통합 장애 후보 추천과 리포트 생성
+
+1. Actions 분석 리포트 상세로 이동합니다.
+2. `서버 로그 후보 추천`을 실행합니다.
+3. 후보별 category score, time score, candidate score와 매칭 근거를 비교합니다.
+4. 추천 1순위 후보로 통합 장애 리포트를 생성합니다.
+5. 통합 리포트 상세에서 다음 내용을 확인합니다.
+   - analysis score와 severity
+   - combined evidence
+   - root cause candidates
+   - recommended actions
+   - 연결된 Actions/서버 로그 원본 리포트
+
+## 기술적 차별점
+
+### 재현 가능한 rule-based 분석
+
+외부 LLM 응답에 의존하지 않고 정규식과 명시적인 규칙으로 결과를 생성합니다. 같은 입력에 같은 category와 점수가 생성되어 분석 근거를 추적하기 쉽습니다.
+
+### 로그와 변경사항을 분리하지 않는 분석 흐름
+
+Actions 로그만 요약하지 않고 `head_sha` 기준 commit, PR, 변경 파일을 함께 제공합니다. 커밋 해시를 클릭하면 실제 GitHub diff로 바로 이동할 수 있습니다.
+
+### category와 시간을 결합한 장애 후보 추천
+
+CI 실패와 서버 로그 리포트의 연관성을 category 60%, 시간 40%로 계산합니다. 추천 결과에 최종 점수뿐 아니라 각 점수와 판단 근거를 모두 노출합니다.
+
+### 원인을 단정하지 않는 결과 구조
+
+분석 결과를 summary, evidence, suspected causes, recommended actions로 분리합니다. 사용자가 근거를 검토하고 최종 판단할 수 있도록 설계했습니다.
+
+### 멱등성을 보장하는 통합 리포트 생성
+
+애플리케이션 사전 조회와 PostgreSQL unique constraint를 함께 사용합니다. 동시에 같은 생성 요청이 들어와도 `IntegrityError`를 rollback하고 기존 리포트를 반환합니다.
+
+### GitHub PAT 보호
+
+GitHub PAT는 Fernet으로 암호화해 저장하고 프론트 화면이나 API 응답에 노출하지 않습니다. 로그 분석 과정에서는 토큰, Authorization 헤더 등 민감정보 패턴을 마스킹합니다.
+
+## 로컬 실행
+
+### 1. PostgreSQL 실행
+
+```bash
+docker compose up -d postgres
+```
+
+### 2. Backend 설정
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Fernet 키 생성:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+`backend/.env` 예시:
+
+```env
+DATABASE_URL=postgresql://loglens:loglens1234@localhost:5432/loglens_db
+JWT_SECRET_KEY=replace-with-a-random-secret
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+GITHUB_TOKEN_ENCRYPTION_KEY=replace-with-generated-fernet-key
+```
+
+마이그레이션과 API 실행:
+
+```bash
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+API 문서:
+
+```text
+http://localhost:8000/docs
+```
+
+### 3. Frontend 실행
+
+```bash
+cd frontend
+npm install
+```
+
+`frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+```bash
+npm run dev
+```
+
+웹 애플리케이션:
+
+```text
+http://localhost:3000
+```
+
+### 검증 명령
+
+```bash
+cd backend
+python -m compileall -q app alembic
+alembic check
+
+cd ../frontend
+npm run lint
+npm run build
+```
+
+## 현재 범위
+
+구현 완료:
+
+- JWT 회원가입 및 로그인
+- 프로젝트 및 GitHub 저장소 연결
+- 실패 Actions run 조회·검색·페이징
+- 실패 로그, 원인 분석, 변경사항 컨텍스트
+- GitHub Issue 및 Actions 분석 리포트 생성
+- 서버 로그 업로드·분석·오류 그룹핑
+- 서버 로그 후보 추천
+- 통합 장애 리포트 생성·목록·상세
+
+향후 확장:
+
+- GitHub App 인증
+- GitHub Webhook 기반 자동 분석
+- Slack 알림
+- 유사 장애 검색
+- 운영 환경 배포 자동화
