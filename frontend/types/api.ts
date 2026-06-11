@@ -213,3 +213,24 @@ export type IncidentReportCreate = {
   github_analysis_report_id: number;
   server_log_analysis_report_id: number;
 };
+
+export type IncidentCandidate = {
+  server_log_analysis_report_id: number;
+  server_log_id: number;
+  category: string;
+  severity: string;
+  summary: string;
+  analysis_score: number | null;
+  candidate_score: number;
+  category_match_score: number;
+  category_match_reasons: string[];
+  time_match_score: number;
+  time_delta_minutes: number;
+  match_reasons: string[];
+  created_at: string;
+};
+
+export type IncidentAutoCreateRequest = {
+  project_id: number;
+  github_analysis_report_id: number;
+};
