@@ -10,6 +10,7 @@ const links = [
   { href: "/projects", label: "GitHub 저장소", icon: "R", section: "repositories" },
   { href: "/server-logs", label: "서버 로그", icon: "L", section: "server-logs" },
   { href: "/reports", label: "분석 리포트", icon: "A", section: "reports" },
+  { href: "/incidents", label: "통합 리포트", icon: "I", section: "incidents" },
 ];
 
 export default function Sidebar() {

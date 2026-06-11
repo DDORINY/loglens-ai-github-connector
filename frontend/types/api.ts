@@ -190,3 +190,26 @@ export type ServerLogAnalysisReport = {
   engine_version: string | null;
   created_at: string;
 };
+
+export type IncidentReport = {
+  id: number;
+  project_id: number;
+  github_analysis_report_id: number;
+  server_log_analysis_report_id: number;
+  status: string;
+  title: string;
+  severity: string;
+  summary: string;
+  combined_evidence: string[];
+  root_cause_candidates: string[];
+  recommended_actions: string[];
+  analysis_score: number | null;
+  engine_version: string;
+  created_at: string;
+};
+
+export type IncidentReportCreate = {
+  project_id: number;
+  github_analysis_report_id: number;
+  server_log_analysis_report_id: number;
+};
