@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timezone
 
 from app.models.ci_analysis_report import CIAnalysisReport
 from app.models.server_log_analysis_report import ServerLogAnalysisReport
@@ -125,7 +126,7 @@ def _score(value) -> int:
         return 0
 
 
-def _calculate_match_score(
+def calculate_category_match(
     ci_category: str,
     log_category: str,
     ci_evidence: list,
@@ -196,6 +197,77 @@ def _calculate_match_score(
         reasons.append("GitHub Actions 실패와 서버 로그 사이의 명확한 category 기반 연관성은 낮습니다.")
 
     return min(score, 100), reasons
+
+
+def calculate_time_match(
+    ci_created_at: datetime,
+    server_created_at: datetime,
+) -> tuple[int, int, str]:
+    def normalize(value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+    delta_minutes_exact = (
+        abs(
+            (
+                normalize(ci_created_at)
+                - normalize(server_created_at)
+            ).total_seconds()
+        )
+        / 60
+    )
+    delta_minutes = round(delta_minutes_exact)
+
+    if delta_minutes_exact <= 30:
+        score = 100
+    elif delta_minutes_exact <= 120:
+        score = 80
+    elif delta_minutes_exact <= 360:
+        score = 60
+    elif delta_minutes_exact <= 1440:
+        score = 30
+    else:
+        score = 10
+
+    reason = f"CI 실패와 서버 로그 분석 리포트 생성 시점이 {delta_minutes}분 차이입니다."
+    return score, delta_minutes, reason
+
+
+def build_incident_candidate(
+    ci_report: CIAnalysisReport,
+    server_report: ServerLogAnalysisReport,
+) -> dict:
+    category_score, category_reasons = calculate_category_match(
+        ci_category=ci_report.category,
+        log_category=server_report.category,
+        ci_evidence=_as_list(ci_report.evidence),
+        log_evidence=_as_list(server_report.evidence),
+    )
+    time_score, time_delta_minutes, time_reason = calculate_time_match(
+        ci_created_at=ci_report.created_at,
+        server_created_at=server_report.created_at,
+    )
+    candidate_score = min(
+        100,
+        round((category_score * 0.60) + (time_score * 0.40)),
+    )
+
+    return {
+        "server_log_analysis_report_id": server_report.id,
+        "server_log_id": server_report.server_log_id,
+        "category": server_report.category,
+        "severity": server_report.severity,
+        "summary": server_report.summary,
+        "analysis_score": server_report.analysis_score,
+        "candidate_score": candidate_score,
+        "category_match_score": category_score,
+        "category_match_reasons": _unique(category_reasons),
+        "time_match_score": time_score,
+        "time_delta_minutes": time_delta_minutes,
+        "match_reasons": _unique(category_reasons + [time_reason]),
+        "created_at": server_report.created_at,
+    }
 
 
 def _calculate_integrated_score(
@@ -269,7 +341,7 @@ def build_incident_analysis(
     ci_evidence = _as_list(ci_report.evidence)
     server_evidence = _as_list(server_report.evidence)
 
-    match_score, match_reasons = _calculate_match_score(
+    match_score, match_reasons = calculate_category_match(
         ci_category=ci_category,
         log_category=log_category,
         ci_evidence=ci_evidence,

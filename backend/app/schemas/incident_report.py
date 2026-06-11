@@ -9,6 +9,27 @@ class IncidentReportCreate(BaseModel):
     server_log_analysis_report_id: int
 
 
+class IncidentAutoCreateRequest(BaseModel):
+    project_id: int
+    github_analysis_report_id: int
+
+
+class IncidentCandidateResponse(BaseModel):
+    server_log_analysis_report_id: int
+    server_log_id: int
+    category: str
+    severity: str
+    summary: str
+    analysis_score: int | None = None
+    candidate_score: int
+    category_match_score: int
+    category_match_reasons: list[str] = Field(default_factory=list)
+    time_match_score: int
+    time_delta_minutes: int
+    match_reasons: list[str] = Field(default_factory=list)
+    created_at: datetime
+
+
 class IncidentReportResponse(BaseModel):
     id: int
     project_id: int
