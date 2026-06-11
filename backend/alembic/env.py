@@ -11,7 +11,15 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.core.config import settings
 from app.db.base import Base
-from app.models import User, Project, GithubRepository, CIAnalysisReport  # noqa: F401
+from app.models import (  # noqa: F401
+    CIAnalysisReport,
+    GithubRepository,
+    IncidentReport,
+    Project,
+    ServerLog,
+    ServerLogAnalysisReport,
+    User,
+)
 
 
 config = context.config

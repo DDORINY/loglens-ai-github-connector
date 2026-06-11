@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
@@ -18,10 +19,10 @@ class ServerLogAnalysisReport(Base):
     severity = Column(String(50), nullable=False)
     summary = Column(Text, nullable=False)
 
-    evidence = Column(JSON, nullable=False, default=list)
-    error_groups = Column(JSON, nullable=False, default=list)
-    suspected_causes = Column(JSON, nullable=False, default=list)
-    recommended_actions = Column(JSON, nullable=False, default=list)
+    evidence = Column(JSONB, nullable=False, default=list)
+    error_groups = Column(JSONB, nullable=False, default=list)
+    suspected_causes = Column(JSONB, nullable=False, default=list)
+    recommended_actions = Column(JSONB, nullable=False, default=list)
 
     analysis_score = Column(Integer, nullable=True)
     engine_version = Column(String(100), nullable=True)

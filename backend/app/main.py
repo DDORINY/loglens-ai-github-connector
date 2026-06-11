@@ -7,6 +7,7 @@ from app.db.session import SessionLocal
 from app.routers.analysis_reports import router as analysis_reports_router
 from app.routers.auth import router as auth_router
 from app.routers.github import router as github_router
+from app.routers.incidents import router as incidents_router
 from app.routers.projects import router as projects_router
 
 
@@ -32,6 +33,7 @@ app.include_router(projects_router)
 app.include_router(github_router)
 app.include_router(analysis_reports_router)
 app.include_router(server_logs.router)
+app.include_router(incidents_router)
 
 
 @app.get("/health")
