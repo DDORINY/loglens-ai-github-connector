@@ -7,6 +7,7 @@ export default function WorkflowRunCard({
   selected,
   busyAction,
   hasContext,
+  commitUrl,
   onContext,
   onLogs,
   onAnalyze,
@@ -16,6 +17,7 @@ export default function WorkflowRunCard({
   selected: boolean;
   busyAction: string | null;
   hasContext: boolean;
+  commitUrl?: string | null;
   onContext: () => void;
   onLogs: () => void;
   onAnalyze: () => void;
@@ -32,7 +34,21 @@ export default function WorkflowRunCard({
       </div>
       <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-500">
         <span className="rounded-full bg-slate-100 px-3 py-1">{run.head_branch || "-"}</span>
-        <span className="rounded-full bg-slate-100 px-3 py-1 font-mono">{shortSha(run.head_sha)}</span>
+        {commitUrl && run.head_sha ? (
+          <a
+            href={commitUrl}
+            target="_blank"
+            rel="noreferrer"
+            title="GitHub에서 실제 커밋 변경 내역 보기"
+            className="rounded-full bg-slate-100 px-3 py-1 font-mono font-bold text-teal-700 hover:bg-teal-50 hover:underline"
+          >
+            {shortSha(run.head_sha)} ↗
+          </a>
+        ) : (
+          <span className="rounded-full bg-slate-100 px-3 py-1 font-mono">
+            {shortSha(run.head_sha)}
+          </span>
+        )}
         <span className="rounded-full bg-slate-100 px-3 py-1">{run.event || "-"}</span>
       </div>
       <p className="mt-4 text-xs text-slate-400">{formatDate(run.created_at)}</p>

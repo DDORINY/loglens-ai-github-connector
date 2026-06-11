@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import AnalysisPanel from "@/components/AnalysisPanel";
@@ -12,18 +12,18 @@ import Header from "@/components/Header";
 import IssueResultCard from "@/components/IssueResultCard";
 import LoadingState from "@/components/LoadingState";
 import LogViewer from "@/components/LogViewer";
-import ReportCard from "@/components/ReportCard";
 import WorkflowRunCard from "@/components/WorkflowRunCard";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import type { ActionsAnalysis, AnalysisResponse, ChangeContext, CIAnalysisReport, GithubRepository, IssueCreateResponse, WorkflowLogs, WorkflowRun } from "@/types/api";
+import type { ActionsAnalysis, AnalysisResponse, ChangeContext, GithubRepository, IssueCreateResponse, WorkflowLogs, WorkflowRun } from "@/types/api";
+
+const RUNS_PER_PAGE = 3;
 
 export default function RepositoryDetailPage() {
   const { repositoryId } = useParams<{ repositoryId: string }>();
   const id = Number(repositoryId);
   const [repository, setRepository] = useState<GithubRepository | null>(null);
   const [runs, setRuns] = useState<WorkflowRun[]>([]);
-  const [reports, setReports] = useState<CIAnalysisReport[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
   const [logs, setLogs] = useState<WorkflowLogs | null>(null);
   const [analysis, setAnalysis] = useState<ActionsAnalysis | null>(null);
@@ -32,23 +32,40 @@ export default function RepositoryDetailPage() {
   const [busy, setBusy] = useState<{ runId: number; action: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [commitSearch, setCommitSearch] = useState("");
+  const [branchSearch, setBranchSearch] = useState("");
+  const [runPage, setRunPage] = useState(1);
 
-  const loadReports = useCallback(async () => {
-    const response = await apiFetch<CIAnalysisReport[]>(`/api/analysis-reports?repository_id=${id}`);
-    setReports(response.data ?? []);
-  }, [id]);
+  const filteredRuns = useMemo(() => {
+    const commitQuery = commitSearch.trim().toLowerCase();
+    const branchQuery = branchSearch.trim().toLowerCase();
+
+    return runs.filter((run) => {
+      const matchesCommit =
+        !commitQuery || (run.head_sha ?? "").toLowerCase().includes(commitQuery);
+      const matchesBranch =
+        !branchQuery || (run.head_branch ?? "").toLowerCase().includes(branchQuery);
+
+      return matchesCommit && matchesBranch;
+    });
+  }, [branchSearch, commitSearch, runs]);
+
+  const totalRunPages = Math.max(1, Math.ceil(filteredRuns.length / RUNS_PER_PAGE));
+  const currentRunPage = Math.min(runPage, totalRunPages);
+  const paginatedRuns = filteredRuns.slice(
+    (currentRunPage - 1) * RUNS_PER_PAGE,
+    currentRunPage * RUNS_PER_PAGE
+  );
 
   const load = useCallback(async () => {
     if (!Number.isFinite(id)) return;
     try {
-      const [repositoryResponse, runsResponse, reportsResponse] = await Promise.all([
+      const [repositoryResponse, runsResponse] = await Promise.all([
         apiFetch<GithubRepository>(`/api/github/repositories/${id}`),
         apiFetch<WorkflowRun[]>(`/api/github/repositories/${id}/actions/runs?status=completed&conclusion=failure&per_page=20`),
-        apiFetch<CIAnalysisReport[]>(`/api/analysis-reports?repository_id=${id}`),
       ]);
       setRepository(repositoryResponse.data);
       setRuns(runsResponse.data ?? []);
-      setReports(reportsResponse.data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "저장소 데이터를 불러오지 못했습니다.");
     } finally {
@@ -107,7 +124,6 @@ export default function RepositoryDetailPage() {
         });
         setIssueResult(response.data);
         if (response.data) setAnalysis(response.data.analysis);
-        await loadReports();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "요청을 처리하지 못했습니다.");
@@ -137,25 +153,127 @@ export default function RepositoryDetailPage() {
 
           <section className="mt-6 grid gap-6 xl:grid-cols-[380px_1fr]">
             <div>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-black text-slate-900">실패한 Actions run</h2>
-                <span className="text-sm font-bold text-red-500">{runs.length}</span>
+              <div className="mb-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-black text-slate-900">실패한 Actions run</h2>
+                  <span className="text-sm font-bold text-red-500">
+                    {filteredRuns.length} / {runs.length}
+                  </span>
+                </div>
+                <div className="mt-4 space-y-3 rounded-3xl border border-teal-100 bg-white p-4 shadow-sm">
+                  <label className="block text-xs font-bold text-slate-600">
+                    커밋 해시 검색
+                    <input
+                      type="search"
+                      className="input mt-2 font-mono text-sm"
+                      value={commitSearch}
+                      onChange={(event) => {
+                        setCommitSearch(event.target.value);
+                        setRunPage(1);
+                      }}
+                      placeholder="전체 또는 짧은 SHA 입력"
+                    />
+                  </label>
+                  <label className="block text-xs font-bold text-slate-600">
+                    브랜치 검색
+                    <input
+                      type="search"
+                      className="input mt-2 text-sm"
+                      value={branchSearch}
+                      onChange={(event) => {
+                        setBranchSearch(event.target.value);
+                        setRunPage(1);
+                      }}
+                      placeholder="예: main, feature/login"
+                    />
+                  </label>
+                  {(commitSearch || branchSearch) && (
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-teal-700 hover:underline"
+                      onClick={() => {
+                        setCommitSearch("");
+                        setBranchSearch("");
+                        setRunPage(1);
+                      }}
+                    >
+                      검색 조건 초기화
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="space-y-4">
-                {runs.length ? runs.map((run) => (
+                {paginatedRuns.length ? paginatedRuns.map((run) => (
                   <WorkflowRunCard
                     key={run.github_run_id}
                     run={run}
                     selected={selectedRunId === run.github_run_id}
                     busyAction={busy?.runId === run.github_run_id ? busy.action : null}
                     hasContext={Boolean(contexts[run.github_run_id])}
+                    commitUrl={
+                      repository && run.head_sha
+                        ? `https://github.com/${repository.owner}/${repository.repo}/commit/${run.head_sha}`
+                        : null
+                    }
                     onContext={() => void loadContext(run.github_run_id)}
                     onLogs={() => void runAction(run.github_run_id, "logs")}
                     onAnalyze={() => void runAction(run.github_run_id, "analysis")}
                     onIssue={() => void runAction(run.github_run_id, "issue")}
                   />
-                )) : <EmptyState title="실패한 run이 없습니다" description="완료 상태이며 conclusion이 failure인 최근 run이 없습니다." />}
+                )) : (
+                  <EmptyState
+                    title={runs.length ? "검색 조건에 맞는 실패 run이 없습니다" : "실패한 run이 없습니다"}
+                    description={
+                      runs.length
+                        ? "커밋 해시 또는 브랜치 검색어를 변경하거나 초기화하세요."
+                        : "완료 상태이며 conclusion이 failure인 최근 run이 없습니다."
+                    }
+                  />
+                )}
               </div>
+              {filteredRuns.length > RUNS_PER_PAGE && (
+                <nav
+                  className="mt-5 flex flex-wrap items-center justify-center gap-2"
+                  aria-label="실패한 Actions run 페이지"
+                >
+                  <button
+                    type="button"
+                    className="btn-secondary px-4 py-2"
+                    disabled={currentRunPage === 1}
+                    onClick={() => setRunPage((page) => Math.max(1, page - 1))}
+                  >
+                    이전
+                  </button>
+                  {Array.from({ length: totalRunPages }, (_, index) => index + 1).map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      aria-current={page === currentRunPage ? "page" : undefined}
+                      className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${
+                        page === currentRunPage
+                          ? "bg-teal-500 text-white shadow-md shadow-teal-100"
+                          : "border border-teal-100 bg-white text-teal-700 hover:bg-teal-50"
+                      }`}
+                      onClick={() => setRunPage(page)}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="btn-secondary px-4 py-2"
+                    disabled={currentRunPage === totalRunPages}
+                    onClick={() => setRunPage((page) => Math.min(totalRunPages, page + 1))}
+                  >
+                    다음
+                  </button>
+                </nav>
+              )}
+              {filteredRuns.length > 0 && (
+                <p className="mt-3 text-center text-xs text-slate-400">
+                  페이지당 최대 {RUNS_PER_PAGE}개 · {currentRunPage} / {totalRunPages} 페이지
+                </p>
+              )}
             </div>
 
             <div className="space-y-5">
@@ -190,13 +308,6 @@ export default function RepositoryDetailPage() {
             </div>
           </section>
 
-          <section className="mt-10">
-            <div className="mb-5">
-              <p className="text-sm font-bold text-teal-600">{reports.length} reports</p>
-              <h2 className="mt-1 text-2xl font-black text-slate-900">분석 리포트 이력</h2>
-            </div>
-            {reports.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{reports.map((report) => <ReportCard key={report.id} report={report} />)}</div> : <EmptyState title="저장된 분석 리포트가 없습니다" description="Issue를 생성하면 분석 결과가 리포트로 저장됩니다." />}
-          </section>
         </>
       )}
     </AppShell>

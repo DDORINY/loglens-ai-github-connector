@@ -29,6 +29,12 @@ export default function ChangeContextPanel({
   onRefresh: () => void;
 }) {
   const score = Math.max(0, Math.min(100, context.relevance.score));
+  const commitSha = context.commit.sha || context.head_sha;
+  const commitUrl =
+    context.commit.html_url ||
+    (commitSha
+      ? `https://github.com/${context.owner}/${context.repo}/commit/${commitSha}`
+      : null);
   const scoreTone =
     score >= 70
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -106,16 +112,28 @@ export default function ChangeContextPanel({
             <span className="rounded-full bg-slate-100 px-3 py-1">
               {context.commit.author || "Unknown author"}
             </span>
-            <span className="rounded-full bg-slate-100 px-3 py-1 font-mono">
-              {shortSha(context.commit.sha || context.head_sha)}
-            </span>
+            {commitUrl ? (
+              <a
+                href={commitUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="GitHub에서 실제 커밋 변경 내역 보기"
+                className="rounded-full bg-slate-100 px-3 py-1 font-mono font-bold text-teal-700 hover:bg-teal-50 hover:underline"
+              >
+                {shortSha(commitSha)} ↗
+              </a>
+            ) : (
+              <span className="rounded-full bg-slate-100 px-3 py-1 font-mono">
+                {shortSha(commitSha)}
+              </span>
+            )}
           </div>
           <p className="mt-4 text-xs text-slate-400">
             {formatDate(context.commit.committed_at)}
           </p>
-          {context.commit.html_url && (
+          {commitUrl && (
             <a
-              href={context.commit.html_url}
+              href={commitUrl}
               target="_blank"
               rel="noreferrer"
               className="mt-4 inline-block text-sm font-bold text-teal-600 hover:underline"
