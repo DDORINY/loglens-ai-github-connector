@@ -8,6 +8,7 @@ import EmptyState from "@/components/EmptyState";
 import ErrorBox from "@/components/ErrorBox";
 import Header from "@/components/Header";
 import LoadingState from "@/components/LoadingState";
+import NextSteps from "@/components/NextSteps";
 import RepositoryCard from "@/components/RepositoryCard";
 import RepositoryConnectForm from "@/components/RepositoryConnectForm";
 import { apiFetch } from "@/lib/api";
@@ -45,7 +46,7 @@ export default function ProjectDetailPage() {
 
   return (
     <AppShell>
-      <Header title={project?.name ?? "Project detail"} description="연결된 GitHub 저장소와 분석 진입점을 관리합니다." />
+      <Header title={project?.name ?? "프로젝트 상세"} description="자동 검사를 확인할 코드 저장소와 분석 시작점을 관리합니다." />
       {loading ? <LoadingState /> : (
         <>
           <ErrorBox message={error} />
@@ -67,15 +68,26 @@ export default function ProjectDetailPage() {
             setRepositories((current) => [repository, ...current.filter((item) => item.id !== repository.id)]);
           }} /></div>
 
+          <div className="mt-6">
+            <NextSteps
+              steps={[
+                "GitHub 코드 저장소를 연결합니다.",
+                "연결된 저장소에서 실패한 자동 검사를 확인합니다.",
+                "실패 내용과 원인을 분석합니다.",
+                "필요하면 서버 오류 로그와 연결해 장애 리포트를 만듭니다.",
+              ]}
+            />
+          </div>
+
           <section className="mt-8">
             <p className="text-sm font-bold text-teal-600">{repositories.length} repositories</p>
-            <h2 className="mt-1 text-2xl font-black text-slate-900">연결된 저장소</h2>
+            <h2 className="mt-1 text-2xl font-black text-slate-900">연결된 코드 저장소</h2>
             {repositories.length ? (
               <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                 {repositories.map((repository) => <RepositoryCard key={repository.id} repository={repository} />)}
               </div>
             ) : (
-              <div className="mt-5"><EmptyState title="연결된 저장소가 없습니다" description="위 폼에서 GitHub 저장소와 PAT를 입력해 연결하세요." /></div>
+              <div className="mt-5"><EmptyState title="연결된 코드 저장소가 없습니다" description="위 연결 영역에서 GitHub 코드 저장소와 접근 토큰(PAT)을 입력하세요." /></div>
             )}
           </section>
         </>

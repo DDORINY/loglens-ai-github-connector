@@ -6,11 +6,11 @@ import { clearAuth } from "@/lib/auth";
 
 const links = [
   { href: "/dashboard", label: "대시보드", icon: "D", section: "dashboard" },
-  { href: "/projects", label: "프로젝트", icon: "P", section: "projects" },
-  { href: "/projects", label: "GitHub 저장소", icon: "R", section: "repositories" },
-  { href: "/server-logs", label: "서버 로그", icon: "L", section: "server-logs" },
-  { href: "/reports", label: "분석 리포트", icon: "A", section: "reports" },
-  { href: "/incidents", label: "통합 리포트", icon: "I", section: "incidents" },
+  { href: "/projects", label: "프로젝트 설정", icon: "P", section: "projects" },
+  { href: "/projects", label: "자동 검사 실패 분석", icon: "R", section: "repositories" },
+  { href: "/server-logs", label: "서버 오류 로그 분석", icon: "L", section: "server-logs" },
+  { href: "/reports", label: "분석 결과 보기", icon: "A", section: "reports" },
+  { href: "/incidents", label: "통합 장애 리포트", icon: "I", section: "incidents" },
 ];
 
 export default function Sidebar() {

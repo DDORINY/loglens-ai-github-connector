@@ -69,17 +69,17 @@ export default function AnalysisPanel({ analysis }: { analysis: ActionsAnalysis 
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="flex items-center gap-2 text-xs font-bold text-slate-500">Category: <Badge>{analysis.category}</Badge></span>
-          <span className="flex items-center gap-2 text-xs font-bold text-slate-500">Confidence: <Badge value={analysis.confidence}>{analysis.confidence}</Badge></span>
+          <span className="flex items-center gap-2 text-xs font-bold text-slate-500">오류 분류: <Badge>{analysis.category}</Badge></span>
+          <span className="flex items-center gap-2 text-xs font-bold text-slate-500">판단 신뢰도: <Badge value={analysis.confidence}>{analysis.confidence}</Badge></span>
         </div>
       </div>
 
       {score !== null && (
         <div className={`mt-6 rounded-2xl border p-5 ${scoreTone}`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-black">Analysis Score: {score} / 100</p>
+            <p className="font-black">분석 점수: {score} / 100</p>
             <span className="text-xs font-bold opacity-70">
-              {score >= 80 ? "High signal" : score >= 50 ? "Moderate signal" : "Limited signal"}
+              {score >= 80 ? "근거가 충분합니다" : score >= 50 ? "추가 확인이 필요합니다" : "근거가 제한적입니다"}
             </span>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/80">
@@ -113,7 +113,7 @@ export default function AnalysisPanel({ analysis }: { analysis: ActionsAnalysis 
         <div className="lg:col-span-2"><List title="추천 조치" items={analysis.recommended_actions} /></div>
       </div>
       <div className="mt-6 rounded-2xl bg-slate-50 p-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Issue preview</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">수정 작업 미리보기 · GitHub Issue</p>
         <h3 className="mt-2 font-black text-slate-900">{analysis.issue_title}</h3>
         <pre className="mt-3 max-h-52 overflow-auto whitespace-pre-wrap font-sans text-sm leading-6 text-slate-600">{analysis.issue_body}</pre>
       </div>

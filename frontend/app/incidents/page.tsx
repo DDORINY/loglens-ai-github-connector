@@ -8,22 +8,40 @@ import ErrorBox from "@/components/ErrorBox";
 import Header from "@/components/Header";
 import IncidentReportCard from "@/components/IncidentReportCard";
 import LoadingState from "@/components/LoadingState";
+import NextSteps from "@/components/NextSteps";
 import { apiFetch } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import type {
+  CIAnalysisReport,
+  GithubRepository,
   IncidentReport,
   IncidentReportCreate,
   Project,
+  ServerLogAnalysisReport,
+  ServerLogListItem,
 } from "@/types/api";
+
+type CIReportOption = CIAnalysisReport & {
+  repositoryName: string;
+};
+
+type ServerReportOption = ServerLogAnalysisReport & {
+  filename: string;
+  source: string | null;
+};
 
 export default function IncidentsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectId, setProjectId] = useState("");
   const [githubReportId, setGithubReportId] = useState("");
   const [serverLogReportId, setServerLogReportId] = useState("");
+  const [ciReportOptions, setCIReportOptions] = useState<CIReportOption[]>([]);
+  const [serverReportOptions, setServerReportOptions] = useState<ServerReportOption[]>([]);
   const [reports, setReports] = useState<IncidentReport[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [optionsLoading, setOptionsLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [createdReport, setCreatedReport] = useState<IncidentReport | null>(null);
@@ -76,6 +94,74 @@ export default function IncidentsPage() {
     }
   }, []);
 
+  const loadReportOptions = useCallback(async (selectedProjectId: string) => {
+    if (!selectedProjectId) {
+      setCIReportOptions([]);
+      setServerReportOptions([]);
+      setGithubReportId("");
+      setServerLogReportId("");
+      return;
+    }
+
+    setOptionsLoading(true);
+    setError("");
+    try {
+      const [repositoryResponse, logResponse] = await Promise.all([
+        apiFetch<GithubRepository[]>(
+          `/api/github/repositories?project_id=${encodeURIComponent(selectedProjectId)}`
+        ),
+        apiFetch<ServerLogListItem[]>(
+          `/api/server-logs?project_id=${encodeURIComponent(selectedProjectId)}`
+        ),
+      ]);
+      const repositories = repositoryResponse.data ?? [];
+      const logs = logResponse.data ?? [];
+      const [ciResponses, serverResponses] = await Promise.all([
+        Promise.all(
+          repositories.map(async (repository) => {
+            const response = await apiFetch<CIAnalysisReport[]>(
+              `/api/analysis-reports?repository_id=${repository.id}`
+            );
+            return (response.data ?? []).map((report) => ({
+              ...report,
+              repositoryName: `${repository.owner}/${repository.repo}`,
+            }));
+          })
+        ),
+        Promise.all(
+          logs.map(async (log) => {
+            const response = await apiFetch<ServerLogAnalysisReport[]>(
+              `/api/server-logs/${log.id}/reports`
+            );
+            return (response.data ?? []).map((report) => ({
+              ...report,
+              filename: log.filename,
+              source: log.source,
+            }));
+          })
+        ),
+      ]);
+      const nextCIReports = ciResponses.flat().sort(
+        (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+      );
+      const nextServerReports = serverResponses.flat().sort(
+        (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+      );
+      setCIReportOptions(nextCIReports);
+      setServerReportOptions(nextServerReports);
+      setGithubReportId(nextCIReports[0] ? String(nextCIReports[0].id) : "");
+      setServerLogReportId(nextServerReports[0] ? String(nextServerReports[0].id) : "");
+    } catch (err) {
+      setCIReportOptions([]);
+      setServerReportOptions([]);
+      setGithubReportId("");
+      setServerLogReportId("");
+      setError(err instanceof Error ? err.message : "통합할 분석 결과를 불러오지 못했습니다.");
+    } finally {
+      setOptionsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadProjects();
@@ -85,6 +171,11 @@ export default function IncidentsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadReports(projectId);
   }, [loadReports, projectId]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadReportOptions(projectId);
+  }, [loadReportOptions, projectId]);
 
   async function createReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,20 +214,30 @@ export default function IncidentsPage() {
     <AppShell>
       <Header
         title="통합 장애 리포트"
-        description="GitHub Actions 분석과 서버 로그 분석을 연결해 하나의 장애 원인 후보와 조치 계획으로 확인합니다."
+        description="자동 검사 실패와 서버 오류 분석 결과를 선택해 하나의 장애 원인과 다음 조치로 정리합니다."
       />
+
+      <div className="mb-6">
+        <NextSteps
+          steps={[
+            "프로젝트를 선택합니다.",
+            "자동 검사 실패 분석 결과를 선택합니다.",
+            "같은 시기의 서버 오류 분석 결과를 선택합니다.",
+            "선택한 두 결과로 통합 장애 리포트를 생성합니다.",
+          ]}
+        />
+      </div>
 
       <section className="panel p-6 sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-600">
           Create incident report
         </p>
-        <h2 className="mt-2 text-xl font-black text-slate-900">통합 리포트 생성</h2>
+        <h2 className="mt-2 text-xl font-black text-slate-900">두 분석 결과를 하나로 연결하기</h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          같은 프로젝트의 GitHub Actions 분석 리포트 ID와 서버 로그 분석 리포트 ID를 입력하세요.
-          동일한 조합이 이미 존재하면 기존 리포트를 안전하게 반환합니다.
+          숫자 ID를 찾을 필요 없이 아래 목록에서 자동 검사 실패와 서버 오류 분석 결과를 선택하세요.
         </p>
 
-        <form onSubmit={createReport} className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_auto] lg:items-end">
+        <form onSubmit={createReport} className="mt-6 space-y-5">
           <label className="text-sm font-bold text-slate-700">
             프로젝트
             <select
@@ -160,39 +261,98 @@ export default function IncidentsPage() {
             </select>
           </label>
 
-          <label className="text-sm font-bold text-slate-700">
-            Actions 분석 리포트 ID
-            <input
-              className="input mt-2"
-              type="number"
-              min="1"
-              inputMode="numeric"
-              value={githubReportId}
-              onChange={(event) => setGithubReportId(event.target.value)}
-              placeholder="예: 1"
-              required
-            />
-          </label>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <label className="rounded-3xl border border-teal-100 bg-teal-50/40 p-5 text-sm font-bold text-slate-700">
+              1. 자동 검사 실패 분석 결과 선택
+              <select
+                className="input mt-3"
+                value={githubReportId}
+                onChange={(event) => setGithubReportId(event.target.value)}
+                disabled={optionsLoading || ciReportOptions.length === 0}
+                required
+              >
+                {optionsLoading && <option value="">분석 결과를 불러오는 중...</option>}
+                {!optionsLoading && ciReportOptions.length === 0 && <option value="">선택할 자동 검사 분석 결과가 없습니다</option>}
+                {ciReportOptions.map((report) => (
+                  <option key={report.id} value={report.id}>
+                    {report.repositoryName} · {report.category} · {report.analysis_score ?? "-"}점 · {formatDate(report.created_at)}
+                  </option>
+                ))}
+              </select>
+              {githubReportId && (
+                <div className="mt-4 rounded-2xl bg-white p-4 text-sm font-normal text-slate-600">
+                  {(() => {
+                    const selected = ciReportOptions.find((report) => String(report.id) === githubReportId);
+                    return selected ? (
+                      <>
+                        <p className="font-black text-slate-900">{selected.summary}</p>
+                        <p className="mt-2">분류: {selected.category}</p>
+                        <p className="mt-1">분석 점수: {selected.analysis_score ?? "-"} / 100</p>
+                      </>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </label>
 
-          <label className="text-sm font-bold text-slate-700">
-            서버 로그 분석 리포트 ID
-            <input
-              className="input mt-2"
-              type="number"
-              min="1"
-              inputMode="numeric"
-              value={serverLogReportId}
-              onChange={(event) => setServerLogReportId(event.target.value)}
-              placeholder="예: 1"
-              required
+            <label className="rounded-3xl border border-teal-100 bg-teal-50/40 p-5 text-sm font-bold text-slate-700">
+              2. 서버 오류 로그 분석 결과 선택
+              <select
+                className="input mt-3"
+                value={serverLogReportId}
+                onChange={(event) => setServerLogReportId(event.target.value)}
+                disabled={optionsLoading || serverReportOptions.length === 0}
+                required
+              >
+                {optionsLoading && <option value="">분석 결과를 불러오는 중...</option>}
+                {!optionsLoading && serverReportOptions.length === 0 && <option value="">선택할 서버 오류 분석 결과가 없습니다</option>}
+                {serverReportOptions.map((report) => (
+                  <option key={report.id} value={report.id}>
+                    {report.source || report.filename} · {report.category} · {report.severity} · {report.analysis_score ?? "-"}점
+                  </option>
+                ))}
+              </select>
+              {serverLogReportId && (
+                <div className="mt-4 rounded-2xl bg-white p-4 text-sm font-normal text-slate-600">
+                  {(() => {
+                    const selected = serverReportOptions.find((report) => String(report.id) === serverLogReportId);
+                    return selected ? (
+                      <>
+                        <p className="font-black text-slate-900">{selected.summary}</p>
+                        <p className="mt-2">로그 출처: {selected.source || selected.filename}</p>
+                        <p className="mt-1">심각도: {selected.severity} · 점수: {selected.analysis_score ?? "-"} / 100</p>
+                      </>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </label>
+          </div>
+
+          {!optionsLoading && (!ciReportOptions.length || !serverReportOptions.length) && (
+            <EmptyState
+              title="통합할 분석 결과가 없습니다."
+              description="먼저 자동 검사 실패 분석 또는 서버 오류 로그 분석을 실행하세요."
+              action={
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Link href="/reports" className="btn-secondary">자동 검사 분석 결과 보기</Link>
+                  <Link href="/server-logs" className="btn-secondary">서버 오류 로그 분석</Link>
+                </div>
+              }
             />
-          </label>
+          )}
 
           <button
-            className="btn-primary h-[50px]"
-            disabled={creating || projectsLoading || !projectId}
+            className="btn-primary"
+            disabled={
+              creating ||
+              optionsLoading ||
+              !projectId ||
+              !githubReportId ||
+              !serverLogReportId
+            }
           >
-            {creating ? "생성 중..." : "통합 리포트 생성"}
+            {creating ? "생성 중..." : "선택한 결과로 통합 장애 리포트 생성"}
           </button>
         </form>
 
@@ -211,12 +371,24 @@ export default function IncidentsPage() {
 
       <div className="mt-5">
         <ErrorBox message={error} />
+        {error && (
+          <div className="mt-3 flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => projectId ? void loadReports(projectId) : void loadProjects()}
+              disabled={projectsLoading || reportsLoading}
+            >
+              다시 시도
+            </button>
+          </div>
+        )}
       </div>
 
       <section className="mt-8">
         <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-bold text-teal-600">{reports.length} reports</p>
+            <p className="text-sm font-bold text-teal-600">{reports.length}개 결과</p>
             <h2 className="mt-1 text-2xl font-black text-slate-900">통합 장애 리포트 목록</h2>
           </div>
           {projectId && (
@@ -239,13 +411,13 @@ export default function IncidentsPage() {
               <IncidentReportCard key={report.id} report={report} />
             ))}
           </div>
-        ) : (
+        ) : error ? null : (
           <EmptyState
             title={projects.length ? "생성된 통합 장애 리포트가 없습니다." : "프로젝트가 없습니다."}
             description={
               projects.length
-                ? "위 생성 영역에서 두 분석 리포트를 연결해 첫 통합 장애 리포트를 생성하세요."
-                : "프로젝트를 먼저 생성한 뒤 분석 리포트를 연결할 수 있습니다."
+                ? "위 생성 영역에서 두 분석 결과를 연결해 첫 통합 장애 리포트를 생성하세요."
+                : "프로젝트를 먼저 생성한 뒤 분석 결과를 연결할 수 있습니다."
             }
             action={
               projects.length === 0

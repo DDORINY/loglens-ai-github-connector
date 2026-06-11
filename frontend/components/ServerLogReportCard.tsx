@@ -26,7 +26,7 @@ export default function ServerLogReportCard({
       )}
       <p className="mt-3 text-xs text-slate-400">{formatDate(report.created_at)}</p>
       <Link href={`/server-log-reports/${report.id}`} className="btn-primary mt-5">
-        분석 리포트 상세 보기
+        분석 결과 자세히 보기
       </Link>
     </article>
   );

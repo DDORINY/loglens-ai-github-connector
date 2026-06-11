@@ -6,6 +6,7 @@ import EmptyState from "@/components/EmptyState";
 import ErrorBox from "@/components/ErrorBox";
 import Header from "@/components/Header";
 import LoadingState from "@/components/LoadingState";
+import NextSteps from "@/components/NextSteps";
 import ReportCard from "@/components/ReportCard";
 import { apiFetch } from "@/lib/api";
 import type { CIAnalysisReport, GithubRepository, Project } from "@/types/api";
@@ -48,7 +49,7 @@ export default function ReportsPage() {
             : ""
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "연결된 GitHub 저장소를 불러오지 못했습니다.");
+      setError(err instanceof Error ? err.message : "연결된 코드 저장소를 불러오지 못했습니다.");
     } finally {
       setOptionsLoading(false);
     }
@@ -78,18 +79,28 @@ export default function ReportsPage() {
 
   return (
     <AppShell>
-      <Header title="분석 리포트" description="GitHub 저장소를 선택해 Actions run 원인 분석과 Issue 생성 이력을 조회합니다." />
+      <Header title="분석 결과 보기" description="코드 저장소를 선택해 자동 검사 실패 원인과 등록된 수정 작업을 확인합니다." />
+      <div className="mb-6">
+        <NextSteps
+          steps={[
+            "분석 결과를 확인할 코드 저장소를 선택합니다.",
+            "실패 원인과 핵심 근거 로그를 확인합니다.",
+            "관련 서버 오류 로그 후보를 추천받습니다.",
+            "필요하면 통합 장애 리포트를 생성합니다.",
+          ]}
+        />
+      </div>
       <section className="panel p-6">
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-600">Repository reports</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">저장소별 분석 리포트 조회</h2>
+          <h2 className="mt-2 text-xl font-black text-slate-900">코드 저장소별 분석 결과 조회</h2>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            분석 리포트를 조회할 GitHub 저장소를 선택하세요. 저장소가 없다면 프로젝트 화면에서 먼저 연결해야 합니다.
+            분석 결과를 조회할 코드 저장소를 선택하세요. 저장소가 없다면 프로젝트 설정에서 먼저 연결해야 합니다.
           </p>
         </div>
         <form onSubmit={search} className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <label className="flex-1 text-sm font-bold text-slate-700">
-            GitHub 저장소
+            코드 저장소
             <select
               className="input mt-2"
               value={repositoryId}
@@ -106,18 +117,18 @@ export default function ReportsPage() {
               ))}
             </select>
           </label>
-          <button className="btn-primary h-[50px]" disabled={loading || optionsLoading || !repositoryId}>{loading ? "조회 중..." : "분석 리포트 조회"}</button>
+          <button className="btn-primary h-[50px]" disabled={loading || optionsLoading || !repositoryId}>{loading ? "조회 중..." : "분석 결과 조회"}</button>
         </form>
       </section>
       <div className="mt-5"><ErrorBox message={error} /></div>
       <section className="mt-8">
-        <h2 className="mb-5 text-2xl font-black text-slate-900">분석 리포트 목록</h2>
+        <h2 className="mb-5 text-2xl font-black text-slate-900">분석 결과 목록</h2>
         {loading ? <LoadingState /> : reports.length ? (
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{reports.map((report) => <ReportCard key={report.id} report={report} />)}</div>
         ) : (
           <EmptyState
-            title={searched ? "조회된 분석 리포트가 없습니다" : repositories.length ? "저장소를 선택해 분석 리포트를 조회하세요" : "연결된 GitHub 저장소가 없습니다"}
-            description={searched ? "이 저장소의 실패 run에서 GitHub Issue를 생성하면 분석 리포트가 저장됩니다." : repositories.length ? "저장소를 선택한 뒤 분석 리포트 조회 버튼을 누르세요." : "프로젝트 상세에서 GitHub 저장소를 먼저 연결하세요."}
+            title={searched ? "조회된 분석 결과가 없습니다" : repositories.length ? "코드 저장소를 선택해 분석 결과를 조회하세요" : "연결된 코드 저장소가 없습니다"}
+            description={searched ? "이 저장소의 실패한 자동 검사에서 수정 작업을 등록하면 분석 결과가 저장됩니다." : repositories.length ? "코드 저장소를 선택한 뒤 분석 결과 조회 버튼을 누르세요." : "프로젝트 설정에서 GitHub 코드 저장소를 먼저 연결하세요."}
           />
         )}
       </section>

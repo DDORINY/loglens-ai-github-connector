@@ -18,23 +18,23 @@ export default function ServerLogCard({
           LOG
         </span>
         <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">
-          {log.source || "source 미지정"}
+          {log.source || "출처 미지정"}
         </span>
       </div>
       <h3 className="mt-5 break-all text-lg font-black text-slate-900">{log.filename}</h3>
       <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
         <span className="rounded-full bg-slate-100 px-3 py-1">{formatBytes(log.size_bytes)}</span>
-        <span className="rounded-full bg-slate-100 px-3 py-1">로그 ID: {log.id}</span>
+        <span className="rounded-full bg-slate-100 px-3 py-1">서버 오류 로그 #{log.id}</span>
       </div>
       <p className="mt-5 border-t border-slate-100 pt-4 text-xs text-slate-400">
         업로드 {formatDate(log.created_at)}
       </p>
       <div className="mt-5 grid grid-cols-2 gap-3">
         <Link href={`/server-logs/${log.id}`} className="btn-secondary">
-          상세 보기
+          오류 내용 보기
         </Link>
         <button className="btn-primary" disabled={analyzing} onClick={onAnalyze}>
-          {analyzing ? "분석 중..." : "분석하기"}
+          {analyzing ? "분석 중..." : "원인 분석"}
         </button>
       </div>
     </article>

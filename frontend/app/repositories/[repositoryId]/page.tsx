@@ -12,6 +12,7 @@ import Header from "@/components/Header";
 import IssueResultCard from "@/components/IssueResultCard";
 import LoadingState from "@/components/LoadingState";
 import LogViewer from "@/components/LogViewer";
+import NextSteps from "@/components/NextSteps";
 import WorkflowRunCard from "@/components/WorkflowRunCard";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -134,7 +135,7 @@ export default function RepositoryDetailPage() {
 
   return (
     <AppShell>
-      <Header title={repository ? `${repository.owner}/${repository.repo}` : "GitHub 저장소"} description="실패한 Actions run에서 실패 로그, 원인 분석, 커밋/PR 변경사항을 확인하고 GitHub Issue를 생성합니다." />
+      <Header title={repository ? `${repository.owner}/${repository.repo}` : "코드 저장소"} description="실패한 자동 검사에서 실패 내용, 원인, 최근 코드 변경을 확인하고 수정 작업을 등록합니다." />
       {loading ? <LoadingState /> : (
         <>
           <ErrorBox message={error} />
@@ -155,14 +156,14 @@ export default function RepositoryDetailPage() {
             <div>
               <div className="mb-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-black text-slate-900">실패한 Actions run</h2>
+                <h2 className="text-xl font-black text-slate-900">실패한 자동 검사</h2>
                   <span className="text-sm font-bold text-red-500">
                     {filteredRuns.length} / {runs.length}
                   </span>
                 </div>
                 <div className="mt-4 space-y-3 rounded-3xl border border-teal-100 bg-white p-4 shadow-sm">
                   <label className="block text-xs font-bold text-slate-600">
-                    커밋 해시 검색
+                    코드 변경 기록 검색
                     <input
                       type="search"
                       className="input mt-2 font-mono text-sm"
@@ -175,7 +176,7 @@ export default function RepositoryDetailPage() {
                     />
                   </label>
                   <label className="block text-xs font-bold text-slate-600">
-                    브랜치 검색
+                    작업 브랜치 검색
                     <input
                       type="search"
                       className="input mt-2 text-sm"
@@ -225,8 +226,8 @@ export default function RepositoryDetailPage() {
                     title={runs.length ? "검색 조건에 맞는 실패 run이 없습니다" : "실패한 run이 없습니다"}
                     description={
                       runs.length
-                        ? "커밋 해시 또는 브랜치 검색어를 변경하거나 초기화하세요."
-                        : "완료 상태이며 conclusion이 failure인 최근 run이 없습니다."
+                        ? "코드 변경 기록 또는 브랜치 검색어를 변경하거나 초기화하세요."
+                        : "최근 자동 빌드/테스트에서 실패한 실행이 없습니다."
                     }
                   />
                 )}
@@ -234,7 +235,7 @@ export default function RepositoryDetailPage() {
               {filteredRuns.length > RUNS_PER_PAGE && (
                 <nav
                   className="mt-5 flex flex-wrap items-center justify-center gap-2"
-                  aria-label="실패한 Actions run 페이지"
+                  aria-label="실패한 자동 검사 페이지"
                 >
                   <button
                     type="button"
@@ -290,16 +291,16 @@ export default function RepositoryDetailPage() {
               {logs && <LogViewer logs={logs} />}
               {!logs && !analysis && !issueResult && !selectedRunId && !busy && (
                 <EmptyState
-                  title="실패 run을 선택해 분석을 시작하세요"
-                  description="왼쪽의 실패한 GitHub Actions run에서 원하는 작업을 실행하세요. 권장 순서는 실패 로그 확인 → 원인 분석 → 커밋/PR 확인 → Issue 생성입니다."
+                  title="실패한 자동 검사를 선택해 분석을 시작하세요"
+                  description="왼쪽에서 실패한 자동 검사를 선택하세요. 권장 순서는 실패 내용 확인 → 원인 분석 → 최근 코드 변경 확인 → 수정 작업 등록입니다."
                   action={
                     <div className="mx-auto max-w-md rounded-2xl border border-teal-100 bg-white p-5 text-left shadow-sm">
                       <p className="text-sm font-black text-slate-900">권장 분석 순서</p>
                       <ol className="mt-3 space-y-2 text-sm text-slate-600">
-                        <li>1. 실패 로그 보기</li>
-                        <li>2. 원인 분석하기</li>
-                        <li>3. 커밋/PR 변경사항 확인</li>
-                        <li>4. GitHub Issue 생성</li>
+                        <li>1. 실패 내용 보기</li>
+                        <li>2. AI로 원인 분석</li>
+                        <li>3. 최근 코드 변경 확인</li>
+                        <li>4. GitHub 수정 작업 등록</li>
                       </ol>
                     </div>
                   }
@@ -307,6 +308,17 @@ export default function RepositoryDetailPage() {
               )}
             </div>
           </section>
+
+          <div className="mt-6">
+            <NextSteps
+              steps={[
+                "왼쪽에서 실패한 자동 검사를 선택합니다.",
+                "실패 내용을 열어 실제 오류 문장을 확인합니다.",
+                "원인 분석과 최근 코드 변경을 차례로 확인합니다.",
+                "확인한 내용을 GitHub 수정 작업으로 등록합니다.",
+              ]}
+            />
+          </div>
 
         </>
       )}

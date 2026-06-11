@@ -9,9 +9,11 @@ import EmptyState from "@/components/EmptyState";
 import ErrorBox from "@/components/ErrorBox";
 import Header from "@/components/Header";
 import LoadingState from "@/components/LoadingState";
+import NextSteps from "@/components/NextSteps";
 import SeverityBadge from "@/components/SeverityBadge";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
+import { friendlyIncidentTitle, incidentCategories, severityLabel } from "@/lib/incident";
 import type { IncidentReport } from "@/types/api";
 
 function DetailList({
@@ -90,12 +92,13 @@ export default function IncidentDetailPage() {
       : score !== null && score >= 50
         ? "border-amber-200 bg-amber-50 text-amber-700"
         : "border-slate-200 bg-slate-50 text-slate-700";
+  const categories = report ? incidentCategories(report.title) : [];
 
   return (
     <AppShell>
       <Header
         title={`통합 장애 리포트 #${incidentId}`}
-        description="GitHub Actions 실패와 서버 로그 장애 후보를 rule-based engine으로 연결한 결과입니다."
+        description="자동 검사 실패와 서버 오류 분석 결과를 규칙 기반 엔진으로 연결한 장애 리포트입니다."
       />
 
       {loading ? (
@@ -104,8 +107,23 @@ export default function IncidentDetailPage() {
         <>
           <ErrorBox message={error} />
 
+          {error && (
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button type="button" onClick={() => void load()} className="btn-primary">
+                다시 불러오기
+              </button>
+              <Link href="/incidents" className="btn-secondary">
+                장애 리포트 목록
+              </Link>
+            </div>
+          )}
+
           {!report && !error && (
-            <EmptyState title="통합 장애 리포트가 없습니다." />
+            <EmptyState
+              title="통합 장애 리포트가 없습니다."
+              description="삭제되었거나 접근할 수 없는 리포트일 수 있습니다."
+              action={<Link href="/incidents" className="btn-primary">장애 리포트 목록</Link>}
+            />
           )}
 
           {report && (
@@ -117,8 +135,11 @@ export default function IncidentDetailPage() {
                   <span className="text-xs text-slate-400">{formatDate(report.created_at)}</span>
                 </div>
                 <h2 className="mt-5 max-w-5xl break-words text-2xl font-black leading-9 text-slate-900">
-                  {report.title}
+                  {friendlyIncidentTitle(report)}
                 </h2>
+                <p className="mt-2 font-mono text-xs text-slate-400">
+                  원본 분류: {categories.length ? categories.join(" · ") : report.title}
+                </p>
                 <p className="mt-4 max-w-5xl whitespace-pre-wrap break-words text-sm leading-7 text-slate-600">
                   {report.summary}
                 </p>
@@ -137,7 +158,7 @@ export default function IncidentDetailPage() {
 
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link href={`/incidents?project_id=${report.project_id}`} className="btn-secondary">
-                    통합 리포트 목록으로
+                    장애 리포트 목록으로
                   </Link>
                   <button type="button" onClick={() => void load()} className="btn-secondary">
                     새로고침
@@ -145,11 +166,26 @@ export default function IncidentDetailPage() {
                 </div>
               </section>
 
+              <NextSteps
+                steps={[
+                  "통합 근거에서 두 오류가 왜 연결됐는지 확인합니다.",
+                  "가능한 원인을 위에서부터 하나씩 점검합니다.",
+                  "추천 조치에 따라 설정, 테스트, 최근 코드 변경을 확인합니다.",
+                  "연결된 원본 분석 결과에서 더 자세한 로그를 확인합니다.",
+                ]}
+              />
+
               <section className="panel p-6">
-                <h2 className="text-xl font-black text-slate-900">리포트 메타데이터</h2>
+                <h2 className="text-xl font-black text-slate-900">리포트 연결 정보</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  통합 분석에 사용된 자동 검사 분석 결과와 서버 오류 분석 결과를 확인할 수 있습니다.
+                </p>
                 <dl className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   <MetadataItem label="Severity">
-                    <SeverityBadge value={report.severity} />
+                    <span className="flex items-center gap-2">
+                      <SeverityBadge value={report.severity} />
+                      {severityLabel(report.severity)}
+                    </span>
                   </MetadataItem>
                   <MetadataItem label="Analysis Score">
                     {report.analysis_score === null ? "-" : `${report.analysis_score} / 100`}
@@ -157,11 +193,21 @@ export default function IncidentDetailPage() {
                   <MetadataItem label="Engine Version">
                     <span className="font-mono text-xs">{report.engine_version}</span>
                   </MetadataItem>
-                  <MetadataItem label="GitHub Actions 분석 리포트 ID">
-                    #{report.github_analysis_report_id}
+                  <MetadataItem label="자동 검사 분석 결과">
+                    <Link
+                      href={`/reports/${report.github_analysis_report_id}`}
+                      className="text-teal-700 hover:underline"
+                    >
+                      #{report.github_analysis_report_id} 상세 보기
+                    </Link>
                   </MetadataItem>
-                  <MetadataItem label="서버 로그 분석 리포트 ID">
-                    #{report.server_log_analysis_report_id}
+                  <MetadataItem label="서버 오류 분석 결과">
+                    <Link
+                      href={`/server-log-reports/${report.server_log_analysis_report_id}`}
+                      className="text-teal-700 hover:underline"
+                    >
+                      #{report.server_log_analysis_report_id} 상세 보기
+                    </Link>
                   </MetadataItem>
                   <MetadataItem label="생성 일시">{formatDate(report.created_at)}</MetadataItem>
                 </dl>
@@ -169,7 +215,7 @@ export default function IncidentDetailPage() {
 
               <DetailList
                 title="통합 근거"
-                description="두 분석 리포트의 연관성을 판단하는 데 사용된 핵심 근거입니다."
+                description="두 분석 결과가 관련 있다고 판단한 핵심 근거입니다."
                 items={report.combined_evidence ?? []}
                 tone="slate"
               />

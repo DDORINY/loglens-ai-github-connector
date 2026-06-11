@@ -7,6 +7,7 @@ import EmptyState from "@/components/EmptyState";
 import ErrorBox from "@/components/ErrorBox";
 import Header from "@/components/Header";
 import LoadingState from "@/components/LoadingState";
+import NextSteps from "@/components/NextSteps";
 import ServerLogCard from "@/components/ServerLogCard";
 import { apiFetch } from "@/lib/api";
 import type {
@@ -159,8 +160,8 @@ export default function ServerLogsPage() {
   return (
     <AppShell>
       <Header
-        title="서버 로그"
-        description="운영 서버 로그를 업로드하고 ERROR, WARN, 5xx 패턴을 기반으로 장애 후보를 분석합니다."
+        title="서버 오류 로그 분석"
+        description="운영 서버의 오류 기록을 업로드하고 ERROR, WARN, 5xx 패턴을 이해하기 쉽게 분석합니다."
       />
       {loading ? (
         <LoadingState />
@@ -198,6 +199,17 @@ export default function ServerLogsPage() {
               ))}
             </div>
           </section>
+
+          <div className="mt-6">
+            <NextSteps
+              steps={[
+                "오류가 발생한 프로젝트와 로그 파일을 선택합니다.",
+                "서버 오류 로그를 업로드합니다.",
+                "분석 버튼을 눌러 핵심 오류와 가능한 원인을 확인합니다.",
+                "자동 검사 실패와 관련이 있다면 통합 장애 리포트를 만듭니다.",
+              ]}
+            />
+          </div>
 
           <form onSubmit={upload} className="panel mt-6 p-6 sm:p-8">
             <div>

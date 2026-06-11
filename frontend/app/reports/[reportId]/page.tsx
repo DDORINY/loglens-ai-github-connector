@@ -11,6 +11,7 @@ import ErrorBox from "@/components/ErrorBox";
 import Header from "@/components/Header";
 import IncidentCandidateCard from "@/components/IncidentCandidateCard";
 import LoadingState from "@/components/LoadingState";
+import NextSteps from "@/components/NextSteps";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import type {
@@ -103,7 +104,7 @@ export default function ReportDetailPage() {
 
   return (
     <AppShell>
-      <Header title={`Report #${reportId}`} description="분석 근거, 원인 후보, 조치 항목과 생성된 Issue를 확인합니다." />
+      <Header title={`자동 검사 분석 결과 #${reportId}`} description="실패 원인, 핵심 근거, 다음 조치와 등록된 수정 작업을 확인합니다." />
       {loading ? <LoadingState /> : (
         <>
           <ErrorBox message={error} />
@@ -116,10 +117,18 @@ export default function ReportDetailPage() {
                   <span className="text-xs text-slate-400">Run #{report.github_run_id} · {formatDate(report.created_at)}</span>
                 </div>
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <Link href={`/repositories/${report.repository_id}`} className="btn-secondary">저장소로 이동</Link>
-                  {report.github_issue_url && <a href={report.github_issue_url} target="_blank" rel="noreferrer" className="btn-primary">Issue #{report.github_issue_number ?? "-"} 열기 ↗</a>}
+                  <Link href={`/repositories/${report.repository_id}`} className="btn-secondary">자동 검사 화면으로 이동</Link>
+                  {report.github_issue_url && <a href={report.github_issue_url} target="_blank" rel="noreferrer" className="btn-primary">수정 작업 #{report.github_issue_number ?? "-"} 열기 ↗</a>}
                 </div>
               </section>
+              <NextSteps
+                steps={[
+                  "핵심 근거 로그와 가능한 원인을 확인합니다.",
+                  "추천 조치를 따라 실패한 설정이나 코드를 점검합니다.",
+                  "서버 오류 후보를 추천받아 같은 장애인지 비교합니다.",
+                  "필요하면 통합 장애 리포트를 생성합니다.",
+                ]}
+              />
               <AnalysisPanel analysis={{
                 category: report.category,
                 summary: report.summary,
@@ -193,7 +202,7 @@ export default function ReportDetailPage() {
                 ) : null}
               </section>
               <section className="panel p-6">
-                <h2 className="text-xl font-black text-slate-900">저장된 Issue 본문</h2>
+                <h2 className="text-xl font-black text-slate-900">등록된 수정 작업 내용</h2>
                 <pre className="mt-5 whitespace-pre-wrap rounded-2xl bg-slate-50 p-5 font-sans text-sm leading-7 text-slate-600">{report.issue_body}</pre>
               </section>
             </div>
